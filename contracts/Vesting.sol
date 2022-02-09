@@ -3,12 +3,15 @@ pragma solidity 0.6.12;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/math/SafeMath.sol";
 
 /**
  * @dev Time-locks tokens according to an unlock schedule.
  */
 
 contract Vesting is Ownable {
+    using SafeMath for uint256;
+
     ERC20 public immutable token;
 
     struct VestingParams {
@@ -65,9 +68,9 @@ contract Vesting is Ownable {
         );
         require(_amount > 0);
         
-        vesting[recipient].lockedAmounts += _amount;
+        vesting[recipient].lockedAmounts = vesting[recipient].lockedAmounts.add(_amount);
         vesting[recipient].unlockBegin = _unlockBegin;
-        vesting[recipient].unlockEnd = _unlockBegin + VESTING_DURATION;
+        vesting[recipient].unlockEnd = _unlockBegin.add(VESTING_DURATION);
         
         emit Setup(recipient, vesting[recipient].lockedAmounts, _unlockBegin, vesting[recipient].unlockEnd);
     }
@@ -81,12 +84,11 @@ contract Vesting is Ownable {
         uint256 locked = vesting[owner].lockedAmounts;
         uint256 claimed = vesting[owner].claimedAmounts;
         if (block.timestamp >= vesting[owner].unlockEnd) {
-            return locked - claimed;
+            return locked.sub(claimed);
         }
         return
-            (locked * (block.timestamp - vesting[owner].unlockBegin)) /
-            (vesting[owner].unlockEnd - vesting[owner].unlockBegin) -
-            claimed;
+            ((locked.mul(block.timestamp.sub(vesting[owner].unlockBegin)))
+            .div(vesting[owner].unlockEnd - vesting[owner].unlockBegin)).sub(claimed);
     }
 
     /**
@@ -100,7 +102,7 @@ contract Vesting is Ownable {
             amount = claimable;
         }
         if (amount != 0) {
-            vesting[msg.sender].claimedAmounts += amount;
+            vesting[msg.sender].claimedAmounts = vesting[msg.sender].claimedAmounts.add(amount);
             require(token.transfer(recipient, amount), "TokenLock: Transfer failed");
             emit Claimed(msg.sender, recipient, amount);
         }
