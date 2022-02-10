@@ -1,5 +1,5 @@
 {
-  "name": "badger-ibbtc-utility-zaps",
+  "name": "citadel-contracts",
   "devDependencies": {
     "commitlint": "^14.1.0",
     "prettier": "^2.4.1",

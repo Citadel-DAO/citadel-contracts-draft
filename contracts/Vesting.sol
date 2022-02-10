@@ -1,18 +1,22 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.6.12;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/math/SafeMath.sol";
+import "@openzeppelin-contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin-contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import "@openzeppelin-contracts-upgradeable/proxy/Initializable.sol";
+import "@openzeppelin-contracts-upgradeable/math/SafeMathUpgradeable.sol";
+import "@openzeppelin-contracts-upgradeable/token/ERC20/SafeERC20Upgradeable.sol";
+
 
 /**
  * @dev Time-locks tokens according to an unlock schedule.
  */
 
-contract Vesting is Ownable {
-    using SafeMath for uint256;
+contract Vesting is Initializable, OwnableUpgradeable {
+    using SafeMathUpgradeable for uint256;
+    using SafeERC20Upgradeable for IERC20Upgradeable;
 
-    ERC20 public immutable token;
+    IERC20Upgradeable public token;
 
     struct VestingParams {
         uint256 unlockBegin;
@@ -31,11 +35,6 @@ contract Vesting is Ownable {
         uint256 _unlockBegin,
         uint256 _unlockEnd
     );
-    event Locked(
-        address indexed sender,
-        address indexed recipient,
-        uint256 amount
-    );
     event Claimed(
         address indexed owner,
         address indexed recipient,
@@ -43,11 +42,11 @@ contract Vesting is Ownable {
     );
 
     /**
-     * @dev Constructor.
      * @param _token The token this contract will lock
      */
-    constructor(ERC20 _token) public {
-        token = _token;
+    function initialize(address _token) public initializer {
+        token = IERC20Upgradeable(_token);
+        __Ownable_init();
     }
 
     /**
@@ -95,7 +94,6 @@ contract Vesting is Ownable {
     function claimableBalance(address owner)
         public
         view
-        virtual
         returns (uint256)
     {
         uint256 locked = vesting[owner].lockedAmounts;
@@ -124,10 +122,7 @@ contract Vesting is Ownable {
             vesting[msg.sender].claimedAmounts = vesting[msg.sender]
                 .claimedAmounts
                 .add(amount);
-            require(
-                token.transfer(recipient, amount),
-                "TokenLock: Transfer failed"
-            );
+            token.safeTransfer(recipient, amount);
             emit Claimed(msg.sender, recipient, amount);
         }
     }

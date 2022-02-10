@@ -46,7 +46,7 @@ contract SupplySchedule is GlobalAccessControlManaged {
         uint256 duration
     ) external onlyRole(CONTRACT_GOVERNANCE_ROLE) gacPausable {}
 
-    /// @dev Modify an existing epoch unilaterally. Past mint actions will nto be affected
+    /// @dev Modify an existing epoch unilaterally. Past mint actions will not be affected
     function modifyEpoch(
         uint256 id,
         uint256 amount,

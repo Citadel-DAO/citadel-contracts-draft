@@ -6,22 +6,25 @@ import "../interfaces/convex/MathUtil.sol";
 import "../interfaces/convex/IStakingProxy.sol";
 import "../interfaces/convex/IRewardStaking.sol";
 import "../interfaces/convex/BoringMath.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
-import "@openzeppelin/contracts/math/Math.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-// CVX Locking contract for https://www.convexfinance.com/
-// CVX locked in this contract will be entitled to voting rights for the Convex Finance platform
-// Based on EPS Staking contract for http://ellipsis.finance/
-// Based on SNX MultiRewards by iamdefinitelyahuman - https://github.com/iamdefinitelyahuman/multi-rewards
-contract CvxLocker is ReentrancyGuard, Ownable {
+import "@openzeppelin-contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import "@openzeppelin-contracts-upgradeable/math/MathUpgradeable.sol";
+import "@openzeppelin-contracts-upgradeable/token/ERC20/SafeERC20Upgradeable.sol";
+import "@openzeppelin-contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+import "@openzeppelin-contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin-contracts-upgradeable/proxy/Initializable.sol";
+
+// Based on CVX Locking contract for https://www.convexfinance.com/
+contract xCitadelLocker is
+    Initializable,
+    ReentrancyGuardUpgradeable,
+    OwnableUpgradeable
+{
     using BoringMath for uint256;
     using BoringMath224 for uint224;
     using BoringMath112 for uint112;
     using BoringMath32 for uint32;
-    using SafeERC20 for IERC20;
+    using SafeERC20Upgradeable for IERC20Upgradeable;
 
     /* ========== STATE VARIABLES ========== */
 
@@ -52,8 +55,9 @@ contract CvxLocker is ReentrancyGuard, Ownable {
     }
 
     //token constants
-    IERC20 public constant stakingToken =
-        IERC20(0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B); //cvx
+    IERC20Upgradeable public stakingToken; // xCTDL token
+
+    // TODO: remove this
     address public constant cvxCrv =
         address(0x62B9c7356A2Dc64a1969e19C23e4f579F9810Aa7);
 
@@ -86,7 +90,7 @@ contract CvxLocker is ReentrancyGuard, Ownable {
 
     //boost
     address public boostPayment =
-        address(0x1389388d01708118b497f59521f6943Be2541bb7);
+        address(0x1389388d01708118b497f59521f6943Be2541bb7); // TODO: change
     uint256 public maximumBoostPayment = 0;
     uint256 public boostRate = 10000;
     uint256 public nextMaximumBoostPayment = 0;
@@ -98,7 +102,7 @@ contract CvxLocker is ReentrancyGuard, Ownable {
     uint256 public maximumStake = 10000;
     address public stakingProxy;
     address public constant cvxcrvStaking =
-        address(0x3Fe65692bfCD0e6CF84cB1E7d24108E434A7587e);
+        address(0x3Fe65692bfCD0e6CF84cB1E7d24108E434A7587e); // TODO: change
     uint256 public constant stakeOffsetOnLock = 500; //allow broader range for staking when depositing
 
     //management
@@ -111,19 +115,29 @@ contract CvxLocker is ReentrancyGuard, Ownable {
     //erc20-like interface
     string private _name;
     string private _symbol;
-    uint8 private immutable _decimals;
+    uint8 private _decimals;
 
     /* ========== CONSTRUCTOR ========== */
 
-    constructor() public Ownable() {
-        _name = "Vote Locked Convex Token";
-        _symbol = "vlCVX";
+    function initialize(
+        address _stakingToken,
+        string memory name,
+        string memory symbol
+    ) public initializer {
+        require(_stakingToken != address(0)); // dev: _stakingToken address should not be zero
+        stakingToken = IERC20Upgradeable(_stakingToken);
+
+        _name = name;
+        _symbol = symbol;
         _decimals = 18;
 
         uint256 currentEpoch = block.timestamp.div(rewardsDuration).mul(
             rewardsDuration
         );
         epochs.push(Epoch({supply: 0, date: uint32(currentEpoch)}));
+
+        __Ownable_init();
+        __ReentrancyGuard_init();
     }
 
     function decimals() public view returns (uint8) {
@@ -224,11 +238,11 @@ contract CvxLocker is ReentrancyGuard, Ownable {
 
     //set approvals for staking cvx and cvxcrv
     function setApprovals() external {
-        IERC20(cvxCrv).safeApprove(cvxcrvStaking, 0);
-        IERC20(cvxCrv).safeApprove(cvxcrvStaking, uint256(-1));
+        IERC20Upgradeable(cvxCrv).safeApprove(cvxcrvStaking, 0);
+        IERC20Upgradeable(cvxCrv).safeApprove(cvxcrvStaking, uint256(-1));
 
-        IERC20(stakingToken).safeApprove(stakingProxy, 0);
-        IERC20(stakingToken).safeApprove(stakingProxy, uint256(-1));
+        IERC20Upgradeable(stakingToken).safeApprove(stakingProxy, 0);
+        IERC20Upgradeable(stakingToken).safeApprove(stakingProxy, uint256(-1));
     }
 
     /* ========== VIEWS ========== */
@@ -278,7 +292,7 @@ contract CvxLocker is ReentrancyGuard, Ownable {
         view
         returns (uint256)
     {
-        return Math.min(block.timestamp, _finishTime);
+        return MathUpgradeable.min(block.timestamp, _finishTime);
     }
 
     function lastTimeRewardApplicable(address _rewardsToken)
@@ -847,7 +861,7 @@ contract CvxLocker is ReentrancyGuard, Ownable {
         //mean will be where we reset to if unbalanced
         uint256 mean = maximumStake.add(minimumStake).div(2);
         uint256 max = maximumStake.add(_offset);
-        uint256 min = Math.min(minimumStake, minimumStake - _offset);
+        uint256 min = MathUpgradeable.min(minimumStake, minimumStake - _offset);
         if (ratio > max) {
             //remove
             uint256 remove = staked.sub(total.mul(mean).div(denominator));
@@ -874,7 +888,10 @@ contract CvxLocker is ReentrancyGuard, Ownable {
                 if (_rewardsToken == cvxCrv && _stake) {
                     IRewardStaking(cvxcrvStaking).stakeFor(_account, reward);
                 } else {
-                    IERC20(_rewardsToken).safeTransfer(_account, reward);
+                    IERC20Upgradeable(_rewardsToken).safeTransfer(
+                        _account,
+                        reward
+                    );
                 }
                 emit RewardPaid(_account, _rewardsToken, reward);
             }
@@ -919,7 +936,7 @@ contract CvxLocker is ReentrancyGuard, Ownable {
 
         // handle the transfer of reward tokens via `transferFrom` to reduce the number
         // of transactions required and ensure correctness of the _reward amount
-        IERC20(_rewardsToken).safeTransferFrom(
+        IERC20Upgradeable(_rewardsToken).safeTransferFrom(
             msg.sender,
             address(this),
             _reward
@@ -946,7 +963,7 @@ contract CvxLocker is ReentrancyGuard, Ownable {
             rewardData[_tokenAddress].lastUpdateTime == 0,
             "Cannot withdraw reward token"
         );
-        IERC20(_tokenAddress).safeTransfer(owner(), _tokenAmount);
+        IERC20Upgradeable(_tokenAddress).safeTransfer(owner(), _tokenAmount);
         emit Recovered(_tokenAddress, _tokenAmount);
     }
 
