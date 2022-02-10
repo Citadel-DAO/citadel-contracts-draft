@@ -3,5 +3,5 @@
 pragma solidity 0.6.12;
 
 interface ISupplySchedule {
-    function getMintable() external view returns (uint);
+    function getMintable() external view returns (uint256);
 }

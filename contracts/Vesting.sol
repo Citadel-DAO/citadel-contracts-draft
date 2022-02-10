@@ -31,14 +31,22 @@ contract Vesting is Ownable {
         uint256 _unlockBegin,
         uint256 _unlockEnd
     );
-    event Locked(address indexed sender, address indexed recipient, uint256 amount);
-    event Claimed(address indexed owner, address indexed recipient, uint256 amount);
+    event Locked(
+        address indexed sender,
+        address indexed recipient,
+        uint256 amount
+    );
+    event Claimed(
+        address indexed owner,
+        address indexed recipient,
+        uint256 amount
+    );
 
     /**
      * @dev Constructor.
      * @param _token The token this contract will lock
      */
-    constructor (ERC20 _token) public {
+    constructor(ERC20 _token) public {
         token = _token;
     }
 
@@ -62,17 +70,21 @@ contract Vesting is Ownable {
         uint256 _amount,
         uint256 _unlockBegin
     ) external {
-        require(
-            msg.sender == vault,
-            "only xCTDL vault"
-        );
+        require(msg.sender == vault, "only xCTDL vault");
         require(_amount > 0);
-        
-        vesting[recipient].lockedAmounts = vesting[recipient].lockedAmounts.add(_amount);
+
+        vesting[recipient].lockedAmounts = vesting[recipient].lockedAmounts.add(
+            _amount
+        );
         vesting[recipient].unlockBegin = _unlockBegin;
         vesting[recipient].unlockEnd = _unlockBegin.add(VESTING_DURATION);
-        
-        emit Setup(recipient, vesting[recipient].lockedAmounts, _unlockBegin, vesting[recipient].unlockEnd);
+
+        emit Setup(
+            recipient,
+            vesting[recipient].lockedAmounts,
+            _unlockBegin,
+            vesting[recipient].unlockEnd
+        );
     }
 
     /**
@@ -80,15 +92,22 @@ contract Vesting is Ownable {
      * @param owner The account to check the claimable balance of.
      * @return The number of tokens currently claimable.
      */
-    function claimableBalance(address owner) public view virtual returns (uint256) {
+    function claimableBalance(address owner)
+        public
+        view
+        virtual
+        returns (uint256)
+    {
         uint256 locked = vesting[owner].lockedAmounts;
         uint256 claimed = vesting[owner].claimedAmounts;
         if (block.timestamp >= vesting[owner].unlockEnd) {
             return locked.sub(claimed);
         }
         return
-            ((locked.mul(block.timestamp.sub(vesting[owner].unlockBegin)))
-            .div(vesting[owner].unlockEnd - vesting[owner].unlockBegin)).sub(claimed);
+            (
+                (locked.mul(block.timestamp.sub(vesting[owner].unlockBegin)))
+                    .div(vesting[owner].unlockEnd - vesting[owner].unlockBegin)
+            ).sub(claimed);
     }
 
     /**
@@ -102,8 +121,13 @@ contract Vesting is Ownable {
             amount = claimable;
         }
         if (amount != 0) {
-            vesting[msg.sender].claimedAmounts = vesting[msg.sender].claimedAmounts.add(amount);
-            require(token.transfer(recipient, amount), "TokenLock: Transfer failed");
+            vesting[msg.sender].claimedAmounts = vesting[msg.sender]
+                .claimedAmounts
+                .add(amount);
+            require(
+                token.transfer(recipient, amount),
+                "TokenLock: Transfer failed"
+            );
             emit Claimed(msg.sender, recipient, amount);
         }
     }

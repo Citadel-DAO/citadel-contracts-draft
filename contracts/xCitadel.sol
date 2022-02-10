@@ -58,7 +58,12 @@ import {BadgerGuestListAPI} from "../interfaces/yearn/BadgerGuestlistApi.sol";
     * All governance related fees goes to treasury
 */
 
-contract xCitadel is ERC20Upgradeable, SettAccessControl, PausableUpgradeable, ReentrancyGuardUpgradeable {
+contract xCitadel is
+    ERC20Upgradeable,
+    SettAccessControl,
+    PausableUpgradeable,
+    ReentrancyGuardUpgradeable
+{
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using AddressUpgradeable for address;
     using SafeMathUpgradeable for uint256;
@@ -89,14 +94,14 @@ contract xCitadel is ERC20Upgradeable, SettAccessControl, PausableUpgradeable, R
     uint256 public lastHarvestAmount; // amount harvested during last harvest
     uint256 public assetsAtLastHarvest; // assets for which the harvest took place.
 
-    mapping (address => uint256) public additionalTokensEarned;
-    mapping (address => uint256) public lastAdditionalTokenAmount;
+    mapping(address => uint256) public additionalTokensEarned;
+    mapping(address => uint256) public lastAdditionalTokenAmount;
 
     /// Fees ///
     /// @notice all fees will be in bps
     uint256 public performanceFeeGovernance; // Perf fee sent to `treasury`
     uint256 public performanceFeeStrategist; // Perf fee sent to `strategist`
-    uint256 public withdrawalFee; // fee issued to `treasury` on withdrawal 
+    uint256 public withdrawalFee; // fee issued to `treasury` on withdrawal
     uint256 public managementFee; // fee issued to `treasury` on report (typically on harvest, but only if strat is autocompounding)
 
     uint256 public maxPerformanceFee; // maximum allowed performance fees
@@ -125,7 +130,12 @@ contract xCitadel is ERC20Upgradeable, SettAccessControl, PausableUpgradeable, R
     );
 
     // Emitted during a report, when there has been an increase in pricePerFullShare (ppfs)
-    event Harvested(address indexed token, uint256 amount, uint256 indexed blockNumber, uint256 timestamp);
+    event Harvested(
+        address indexed token,
+        uint256 amount,
+        uint256 indexed blockNumber,
+        uint256 timestamp
+    );
 
     event SetTreasury(address indexed newTreasury);
     event SetStrategy(address indexed newStrategy);
@@ -155,7 +165,7 @@ contract xCitadel is ERC20Upgradeable, SettAccessControl, PausableUpgradeable, R
     /// @param _symbol Specify a custom sett symbol. Leave empty for default value.
     /// @param _feeConfig Values for the 4 different types of fees charges by the sett
     ///         [performanceFeeGovernance, performanceFeeStrategist, withdrawToVault, managementFee]
-    ///         Each fee should be less than the constant hard-caps defined above. 
+    ///         Each fee should be less than the constant hard-caps defined above.
     function initialize(
         address _token,
         address _governance,
@@ -177,29 +187,44 @@ contract xCitadel is ERC20Upgradeable, SettAccessControl, PausableUpgradeable, R
         require(_badgerTree != address(0)); // dev: _badgerTree address should not be zero
 
         // Check for fees being reasonable (see below for interpretation)
-        require(_feeConfig[0] <= PERFORMANCE_FEE_HARD_CAP, "performanceFeeGovernance too high");
-        require(_feeConfig[1] <= PERFORMANCE_FEE_HARD_CAP, "performanceFeeStrategist too high");
-        require(_feeConfig[2] <= WITHDRAWAL_FEE_HARD_CAP, "withdrawalFee too high");
-        require(_feeConfig[3] <= MANAGEMENT_FEE_HARD_CAP, "managementFee too high");
+        require(
+            _feeConfig[0] <= PERFORMANCE_FEE_HARD_CAP,
+            "performanceFeeGovernance too high"
+        );
+        require(
+            _feeConfig[1] <= PERFORMANCE_FEE_HARD_CAP,
+            "performanceFeeStrategist too high"
+        );
+        require(
+            _feeConfig[2] <= WITHDRAWAL_FEE_HARD_CAP,
+            "withdrawalFee too high"
+        );
+        require(
+            _feeConfig[3] <= MANAGEMENT_FEE_HARD_CAP,
+            "managementFee too high"
+        );
 
         string memory name;
         string memory symbol;
-
 
         // If they are non empty string we'll use the custom names
         // Else just add the default prefix
         IERC20Detailed namedToken = IERC20Detailed(_token);
 
-        if(keccak256(abi.encodePacked(_name)) != keccak256("")) {
+        if (keccak256(abi.encodePacked(_name)) != keccak256("")) {
             name = _name;
         } else {
-            name = string(abi.encodePacked(_defaultNamePrefix, namedToken.name()));
+            name = string(
+                abi.encodePacked(_defaultNamePrefix, namedToken.name())
+            );
         }
 
         if (keccak256(abi.encodePacked(_symbol)) != keccak256("")) {
             symbol = _symbol;
         } else {
-            symbol = string(abi.encodePacked(_symbolSymbolPrefix, namedToken.symbol()));
+            symbol = string(
+                abi.encodePacked(_symbolSymbolPrefix, namedToken.symbol())
+            );
         }
 
         // Initializing the lpcomponent token
@@ -231,9 +256,12 @@ contract xCitadel is ERC20Upgradeable, SettAccessControl, PausableUpgradeable, R
 
     /// ===== Modifiers ====
 
-    /// @notice Checks whether a call is from guardian or governance. 
+    /// @notice Checks whether a call is from guardian or governance.
     function _onlyAuthorizedPausers() internal view {
-        require(msg.sender == guardian || msg.sender == governance, "onlyPausers");
+        require(
+            msg.sender == guardian || msg.sender == governance,
+            "onlyPausers"
+        );
     }
 
     /// @notice Checks whether a call is from the strategy.
@@ -242,7 +270,7 @@ contract xCitadel is ERC20Upgradeable, SettAccessControl, PausableUpgradeable, R
     }
 
     /// ===== View Functions =====
-    
+
     /// @notice Used to track the deployed version of the contract.
     /// @return Current version of the contract.
     function version() external pure returns (string memory) {
@@ -262,7 +290,8 @@ contract xCitadel is ERC20Upgradeable, SettAccessControl, PausableUpgradeable, R
     /// @notice Gives the total balance of the underlying token within the sett and strategy system.
     /// @return Balance of token handled by the sett.
     function balance() public view returns (uint256) {
-        return token.balanceOf(address(this)).add(IStrategy(strategy).balanceOf());
+        return
+            token.balanceOf(address(this)).add(IStrategy(strategy).balanceOf());
     }
 
     /// @notice Defines how much of the Setts' underlying is available for strategy to borrow.
@@ -273,55 +302,64 @@ contract xCitadel is ERC20Upgradeable, SettAccessControl, PausableUpgradeable, R
 
     /// ===== Public Actions =====
 
-    /// @notice Deposits `_amount` tokens, issuing shares. 
-    ///         Note that deposits are not accepted when the Sett is paused or when `pausedDeposit` is true. 
-    /// @dev See `_depositFor` for details on how deposit is implemented. 
-    /// @param _amount Quantity of tokens to deposit. 
+    /// @notice Deposits `_amount` tokens, issuing shares.
+    ///         Note that deposits are not accepted when the Sett is paused or when `pausedDeposit` is true.
+    /// @dev See `_depositFor` for details on how deposit is implemented.
+    /// @param _amount Quantity of tokens to deposit.
     function deposit(uint256 _amount) external whenNotPaused {
         _depositWithAuthorization(_amount, new bytes32[](0));
     }
 
-    /// @notice Deposits `_amount` tokens, issuing shares. 
+    /// @notice Deposits `_amount` tokens, issuing shares.
     ///         Checks the guestlist to verify that the calling account is authorized to make a deposit for the specified `_amount`.
-    ///         Note that deposits are not accepted when the Sett is paused or when `pausedDeposit` is true. 
+    ///         Note that deposits are not accepted when the Sett is paused or when `pausedDeposit` is true.
     /// @dev See `_depositForWithAuthorization` for details on guestlist authorization.
-    /// @param _amount Quantity of tokens to deposit. 
+    /// @param _amount Quantity of tokens to deposit.
     /// @param proof Merkle proof to validate in the guestlist.
-    function deposit(uint256 _amount, bytes32[] memory proof) external whenNotPaused {
+    function deposit(uint256 _amount, bytes32[] memory proof)
+        external
+        whenNotPaused
+    {
         _depositWithAuthorization(_amount, proof);
     }
 
-    /// @notice Deposits all tokens, issuing shares. 
-    ///         Note that deposits are not accepted when the Sett is paused or when `pausedDeposit` is true. 
-    /// @dev See `_depositFor` for details on how deposit is implemented. 
+    /// @notice Deposits all tokens, issuing shares.
+    ///         Note that deposits are not accepted when the Sett is paused or when `pausedDeposit` is true.
+    /// @dev See `_depositFor` for details on how deposit is implemented.
     function depositAll() external whenNotPaused {
-        _depositWithAuthorization(token.balanceOf(msg.sender), new bytes32[](0));
+        _depositWithAuthorization(
+            token.balanceOf(msg.sender),
+            new bytes32[](0)
+        );
     }
 
-    /// @notice Deposits all tokens, issuing shares. 
+    /// @notice Deposits all tokens, issuing shares.
     ///         Checks the guestlist to verify that the calling is authorized to make a full deposit.
-    ///         Note that deposits are not accepted when the Sett is paused or when `pausedDeposit` is true. 
+    ///         Note that deposits are not accepted when the Sett is paused or when `pausedDeposit` is true.
     /// @dev See `_depositForWithAuthorization` for details on guestlist authorization.
     /// @param proof Merkle proof to validate in the guestlist.
     function depositAll(bytes32[] memory proof) external whenNotPaused {
         _depositWithAuthorization(token.balanceOf(msg.sender), proof);
     }
 
-    /// @notice Deposits `_amount` tokens, issuing shares to `recipient`. 
-    ///         Note that deposits are not accepted when the Sett is paused or when `pausedDeposit` is true. 
-    /// @dev See `_depositFor` for details on how deposit is implemented. 
+    /// @notice Deposits `_amount` tokens, issuing shares to `recipient`.
+    ///         Note that deposits are not accepted when the Sett is paused or when `pausedDeposit` is true.
+    /// @dev See `_depositFor` for details on how deposit is implemented.
     /// @param _recipient Address to issue the Sett shares to.
-    /// @param _amount Quantity of tokens to deposit. 
-    function depositFor(address _recipient, uint256 _amount) external whenNotPaused {
+    /// @param _amount Quantity of tokens to deposit.
+    function depositFor(address _recipient, uint256 _amount)
+        external
+        whenNotPaused
+    {
         _depositForWithAuthorization(_recipient, _amount, new bytes32[](0));
     }
 
-    /// @notice Deposits `_amount` tokens, issuing shares to `recipient`. 
+    /// @notice Deposits `_amount` tokens, issuing shares to `recipient`.
     ///         Checks the guestlist to verify that `recipient` is authorized to make a deposit for the specified `_amount`.
-    ///         Note that deposits are not accepted when the Sett is paused or when `pausedDeposit` is true. 
+    ///         Note that deposits are not accepted when the Sett is paused or when `pausedDeposit` is true.
     /// @dev See `_depositForWithAuthorization` for details on guestlist authorization.
     /// @param _recipient Address to issue the Sett shares to.
-    /// @param _amount Quantity of tokens to deposit. 
+    /// @param _amount Quantity of tokens to deposit.
     function depositFor(
         address _recipient,
         uint256 _amount,
@@ -331,15 +369,15 @@ contract xCitadel is ERC20Upgradeable, SettAccessControl, PausableUpgradeable, R
     }
 
     /// @notice Redeems `_shares` for an appropriate amount of tokens.
-    ///         Note that withdrawals are not processed when the Sett is paused. 
+    ///         Note that withdrawals are not processed when the Sett is paused.
     /// @dev See `_withdraw` for details on how withdrawals are processed.
-    /// @param _shares Quantity of shares to redeem. 
+    /// @param _shares Quantity of shares to redeem.
     function withdraw(uint256 _shares) external whenNotPaused {
         _withdraw(_shares);
     }
 
-    /// @notice Redeems all shares, issuing an appropriate amount of tokens. 
-    ///         Note that withdrawals are not processed when the Sett is paused. 
+    /// @notice Redeems all shares, issuing an appropriate amount of tokens.
+    ///         Note that withdrawals are not processed when the Sett is paused.
     /// @dev See `_withdraw` for details on how withdrawals are processed.
     function withdrawAll() external whenNotPaused {
         _withdraw(balanceOf(msg.sender));
@@ -348,16 +386,14 @@ contract xCitadel is ERC20Upgradeable, SettAccessControl, PausableUpgradeable, R
     /// ===== Permissioned Actions: Strategy =====
 
     /// @notice Used by the strategy to report a harvest to the sett.
-    ///         Issues shares for the strategist and treasury based on the performance fees and harvested amount. 
-    ///         Issues shares for the treasury based on the management fee and the time elapsed since last harvest. 
+    ///         Issues shares for the strategist and treasury based on the performance fees and harvested amount.
+    ///         Issues shares for the treasury based on the management fee and the time elapsed since last harvest.
     ///         Updates harvest variables for on-chain APR tracking.
     ///         This can only be called by the strategy.
     /// @dev This implicitly trusts that the strategy reports the correct amount.
     ///      Pausing on this function happens at the strategy level.
     /// @param _harvestedAmount Amount of underlying token harvested by the strategy.
-    function reportHarvest(
-        uint256 _harvestedAmount
-    ) external nonReentrant {
+    function reportHarvest(uint256 _harvestedAmount) external nonReentrant {
         _onlyStrategy();
 
         uint256 harvestTime = block.timestamp;
@@ -384,11 +420,16 @@ contract xCitadel is ERC20Upgradeable, SettAccessControl, PausableUpgradeable, R
         // Update time either way
         lastHarvestedAt = harvestTime;
 
-        emit Harvested(address(token), _harvestedAmount, block.number, block.timestamp);
+        emit Harvested(
+            address(token),
+            _harvestedAmount,
+            block.number,
+            block.timestamp
+        );
     }
 
     /// @notice Used by the strategy to report harvest of additional tokens to the sett.
-    ///         Charges performance fees on the additional tokens and transfers fees to treasury and strategist. 
+    ///         Charges performance fees on the additional tokens and transfers fees to treasury and strategist.
     ///         The remaining amount is sent to badgerTree for emissions.
     ///         Updates harvest variables for on-chain APR tracking.
     ///         This can only be called by the strategy.
@@ -398,22 +439,40 @@ contract xCitadel is ERC20Upgradeable, SettAccessControl, PausableUpgradeable, R
     function reportAdditionalToken(address _token) external nonReentrant {
         _onlyStrategy();
         require(address(token) != _token, "No want");
-        uint256 tokenBalance = IERC20Upgradeable(_token).balanceOf(address(this));
+        uint256 tokenBalance = IERC20Upgradeable(_token).balanceOf(
+            address(this)
+        );
 
-        additionalTokensEarned[_token] = additionalTokensEarned[_token].add(tokenBalance);
+        additionalTokensEarned[_token] = additionalTokensEarned[_token].add(
+            tokenBalance
+        );
         lastAdditionalTokenAmount[_token] = tokenBalance;
 
         // We may have more, but we still report only what the strat sent
-        uint256 governanceRewardsFee = _calculateFee(tokenBalance, performanceFeeGovernance);
-        uint256 strategistRewardsFee = _calculateFee(tokenBalance, performanceFeeStrategist);
+        uint256 governanceRewardsFee = _calculateFee(
+            tokenBalance,
+            performanceFeeGovernance
+        );
+        uint256 strategistRewardsFee = _calculateFee(
+            tokenBalance,
+            performanceFeeStrategist
+        );
 
         IERC20Upgradeable(_token).safeTransfer(treasury, governanceRewardsFee);
-        IERC20Upgradeable(_token).safeTransfer(strategist, strategistRewardsFee);
+        IERC20Upgradeable(_token).safeTransfer(
+            strategist,
+            strategistRewardsFee
+        );
 
         // Send rest to tree
         uint256 newBalance = IERC20Upgradeable(_token).balanceOf(address(this));
         IERC20Upgradeable(_token).safeTransfer(badgerTree, newBalance);
-        emit TreeDistribution(_token, newBalance, block.number, block.timestamp);
+        emit TreeDistribution(
+            _token,
+            newBalance,
+            block.number,
+            block.timestamp
+        );
     }
 
     /// ===== Permissioned Actions: Governance =====
@@ -442,10 +501,12 @@ contract xCitadel is ERC20Upgradeable, SettAccessControl, PausableUpgradeable, R
         _onlyGovernance();
         require(_strategy != address(0), "Address 0");
 
-
         /// NOTE: Migrate funds if settings strategy when already existing one
         if (strategy != address(0)) {
-            require(IStrategy(strategy).balanceOf() == 0, "Please withdrawToVault before changing strat");
+            require(
+                IStrategy(strategy).balanceOf() == 0,
+                "Please withdrawToVault before changing strat"
+            );
         }
         strategy = _strategy;
         emit SetStrategy(_strategy);
@@ -471,7 +532,10 @@ contract xCitadel is ERC20Upgradeable, SettAccessControl, PausableUpgradeable, R
     /// @param _fees The new maximum cap for performance fee.
     function setMaxPerformanceFee(uint256 _fees) external {
         _onlyGovernance();
-        require(_fees <= PERFORMANCE_FEE_HARD_CAP, "performanceFeeStrategist too high");
+        require(
+            _fees <= PERFORMANCE_FEE_HARD_CAP,
+            "performanceFeeStrategist too high"
+        );
 
         maxPerformanceFee = _fees;
         emit SetMaxPerformanceFee(_fees);
@@ -513,7 +577,7 @@ contract xCitadel is ERC20Upgradeable, SettAccessControl, PausableUpgradeable, R
 
         toEarnBps = _newToEarnBps;
         emit SetToEarnBps(_newToEarnBps);
-    } 
+    }
 
     /// @notice Changes the guestlist address.
     ///         The guestList is used to gate or limit deposits. If no guestlist is set then anyone can deposit any amount.
@@ -546,9 +610,15 @@ contract xCitadel is ERC20Upgradeable, SettAccessControl, PausableUpgradeable, R
     ///         This can be called by either governance or strategist.
     /// @dev See `reportHarvest` and `reportAdditionalToken` to see how performance fees are charged.
     /// @param _performanceFeeStrategist The new performance fee.
-    function setPerformanceFeeStrategist(uint256 _performanceFeeStrategist) external whenNotPaused {
+    function setPerformanceFeeStrategist(uint256 _performanceFeeStrategist)
+        external
+        whenNotPaused
+    {
         _onlyGovernanceOrStrategist();
-        require(_performanceFeeStrategist <= maxPerformanceFee, "Excessive strategist performance fee");
+        require(
+            _performanceFeeStrategist <= maxPerformanceFee,
+            "Excessive strategist performance fee"
+        );
         performanceFeeStrategist = _performanceFeeStrategist;
         emit SetPerformanceFeeStrategist(_performanceFeeStrategist);
     }
@@ -560,9 +630,15 @@ contract xCitadel is ERC20Upgradeable, SettAccessControl, PausableUpgradeable, R
     ///         This can be called by either governance or strategist.
     /// @dev See `reportHarvest` and `reportAdditionalToken` to see how performance fees are charged.
     /// @param _performanceFeeGovernance The new performance fee.
-    function setPerformanceFeeGovernance(uint256 _performanceFeeGovernance) external whenNotPaused {
+    function setPerformanceFeeGovernance(uint256 _performanceFeeGovernance)
+        external
+        whenNotPaused
+    {
         _onlyGovernanceOrStrategist();
-        require(_performanceFeeGovernance <= maxPerformanceFee, "Excessive governance performance fee");
+        require(
+            _performanceFeeGovernance <= maxPerformanceFee,
+            "Excessive governance performance fee"
+        );
         performanceFeeGovernance = _performanceFeeGovernance;
         emit SetPerformanceFeeGovernance(_performanceFeeGovernance);
     }
@@ -590,7 +666,7 @@ contract xCitadel is ERC20Upgradeable, SettAccessControl, PausableUpgradeable, R
         IStrategy(strategy).withdrawToVault();
     }
 
-    /// @notice Sends balance of any extra token earned by the strategy (from airdrops, donations etc.) 
+    /// @notice Sends balance of any extra token earned by the strategy (from airdrops, donations etc.)
     ///         to the badgerTree for emissions.
     ///         The `_token` should be different from any tokens managed by the strategy.
     ///         This can only be called by either strategist or governance.
@@ -613,9 +689,12 @@ contract xCitadel is ERC20Upgradeable, SettAccessControl, PausableUpgradeable, R
 
         IStrategy(strategy).withdrawOther(_token);
         // Send all `_token` we have
-        // Safe because `withdrawOther` will revert on protected tokens  
+        // Safe because `withdrawOther` will revert on protected tokens
         // Done this way works for both a donation to strategy or to vault
-        IERC20Upgradeable(_token).safeTransfer(governance, IERC20Upgradeable(_token).balanceOf(address(this)));
+        IERC20Upgradeable(_token).safeTransfer(
+            governance,
+            IERC20Upgradeable(_token).balanceOf(address(this))
+        );
     }
 
     /// @notice Deposits the available balance of the underlying token into the strategy.
@@ -639,7 +718,7 @@ contract xCitadel is ERC20Upgradeable, SettAccessControl, PausableUpgradeable, R
         pausedDeposit = true;
         emit PauseDeposits(msg.sender);
     }
-    
+
     /// @notice Unpauses deposits.
     ///         This can only be called by governance.
     function unpauseDeposits() external {
@@ -664,13 +743,16 @@ contract xCitadel is ERC20Upgradeable, SettAccessControl, PausableUpgradeable, R
 
     /// ===== Internal Implementations =====
 
-    /// @notice Deposits `_amount` tokens, issuing shares to `recipient`. 
-    ///         Note that deposits are not accepted when `pausedDeposit` is true. 
+    /// @notice Deposits `_amount` tokens, issuing shares to `recipient`.
+    ///         Note that deposits are not accepted when `pausedDeposit` is true.
     /// @dev This is the actual deposit operation.
     ///      Deposits are based on the realized value of underlying assets between Sett & associated Strategy
     /// @param _recipient Address to issue the Sett shares to.
-    /// @param _amount Quantity of tokens to deposit. 
-    function _depositFor(address _recipient, uint256 _amount) internal nonReentrant {
+    /// @param _amount Quantity of tokens to deposit.
+    function _depositFor(address _recipient, uint256 _amount)
+        internal
+        nonReentrant
+    {
         require(_recipient != address(0), "Address 0");
         require(_amount != 0, "Amount 0");
         require(!pausedDeposit, "pausedDeposit"); // dev: deposits are paused
@@ -683,7 +765,9 @@ contract xCitadel is ERC20Upgradeable, SettAccessControl, PausableUpgradeable, R
     }
 
     /// @dev See `_depositWithAuthorization`
-    function _depositWithAuthorization(uint256 _amount, bytes32[] memory proof) internal {
+    function _depositWithAuthorization(uint256 _amount, bytes32[] memory proof)
+        internal
+    {
         _depositForWithAuthorization(msg.sender, _amount, proof);
     }
 
@@ -695,18 +779,20 @@ contract xCitadel is ERC20Upgradeable, SettAccessControl, PausableUpgradeable, R
         bytes32[] memory proof
     ) internal {
         if (address(guestList) != address(0)) {
-            require(guestList.authorized(_recipient, _amount, proof), "GuestList: Not Authorized");
+            require(
+                guestList.authorized(_recipient, _amount, proof),
+                "GuestList: Not Authorized"
+            );
         }
         _depositFor(_recipient, _amount);
     }
 
-
     /// @notice Redeems `_shares` for an appropriate amount of tokens.
     /// @dev This is the actual withdraw operation.
-    ///      Withdraws from strategy positions if sett doesn't contain enough tokens to process the withdrawal. 
+    ///      Withdraws from strategy positions if sett doesn't contain enough tokens to process the withdrawal.
     ///      Calculates withdrawal fees and issues corresponding shares to treasury.
     ///      No rebalance implementation for lower fees and faster swaps
-    /// @param _shares Quantity of shares to redeem. 
+    /// @param _shares Quantity of shares to redeem.
     function _withdraw(uint256 _shares) internal nonReentrant {
         require(_shares != 0, "0 Shares");
 
@@ -724,10 +810,10 @@ contract xCitadel is ERC20Upgradeable, SettAccessControl, PausableUpgradeable, R
                 r = b.add(_diff);
             }
         }
-        
+
         uint256 _fee = _calculateFee(r, withdrawalFee);
         uint256 _amount = r.sub(_fee);
-        
+
         // Send funds to vesting contract and setup vesting
         IVesting(vesting).setupVesting(msg.sender, _amount, block.timestamp);
         token.safeTransfer(vesting, _amount);
@@ -741,7 +827,11 @@ contract xCitadel is ERC20Upgradeable, SettAccessControl, PausableUpgradeable, R
     /// @param amount Amount to calculate fee on.
     /// @param feeBps The fee to be charged in basis points.
     /// @return Amount of fees to take.
-    function _calculateFee(uint256 amount, uint256 feeBps) internal pure returns (uint256) {
+    function _calculateFee(uint256 amount, uint256 feeBps)
+        internal
+        pure
+        returns (uint256)
+    {
         if (feeBps == 0) {
             return 0;
         }
@@ -757,9 +847,15 @@ contract xCitadel is ERC20Upgradeable, SettAccessControl, PausableUpgradeable, R
         view
         returns (uint256, uint256)
     {
-        uint256 governancePerformanceFee = _calculateFee(_amount, performanceFeeGovernance);
+        uint256 governancePerformanceFee = _calculateFee(
+            _amount,
+            performanceFeeGovernance
+        );
 
-        uint256 strategistPerformanceFee = _calculateFee(_amount, performanceFeeStrategist);
+        uint256 strategistPerformanceFee = _calculateFee(
+            _amount,
+            performanceFeeStrategist
+        );
 
         return (governancePerformanceFee, strategistPerformanceFee);
     }
@@ -785,15 +881,26 @@ contract xCitadel is ERC20Upgradeable, SettAccessControl, PausableUpgradeable, R
     /// @dev Helper function that issues shares based on performance and management fee when a harvest is reported.
     /// @param _harvestedAmount The harvested amount to take fee on.
     /// @param harvestTime Time of harvest (block.timestamp).
-    function _handleFees(uint256 _harvestedAmount, uint256 harvestTime) internal {
-        (uint256 feeGovernance, uint256 feeStrategist) = _calculatePerformanceFee(_harvestedAmount);
+    function _handleFees(uint256 _harvestedAmount, uint256 harvestTime)
+        internal
+    {
+        (
+            uint256 feeGovernance,
+            uint256 feeStrategist
+        ) = _calculatePerformanceFee(_harvestedAmount);
         uint256 duration = harvestTime.sub(lastHarvestedAt);
 
         // Management fee is calculated against the assets before harvest, to make it fair to depositors
-        uint256 management_fee = managementFee > 0 ? managementFee.mul(balance().sub(_harvestedAmount)).mul(duration).div(SECS_PER_YEAR).div(MAX_BPS) : 0;
+        uint256 management_fee = managementFee > 0
+            ? managementFee
+                .mul(balance().sub(_harvestedAmount))
+                .mul(duration)
+                .div(SECS_PER_YEAR)
+                .div(MAX_BPS)
+            : 0;
         uint256 totalGovernanceFee = feeGovernance.add(management_fee);
 
-        // Pool size is the size of the pool minus the fees, this way 
+        // Pool size is the size of the pool minus the fees, this way
         // it's equivalent to sending the tokens as rewards after the harvest
         // and depositing them again
         uint256 _pool = balance().sub(totalGovernanceFee).sub(feeStrategist);
@@ -805,7 +912,11 @@ contract xCitadel is ERC20Upgradeable, SettAccessControl, PausableUpgradeable, R
 
         if (feeStrategist != 0 && strategist != address(0)) {
             /// NOTE: adding feeGovernance backed to _pool as shares would have been issued for it.
-            _mintSharesFor(strategist, feeStrategist, _pool.add(totalGovernanceFee));
+            _mintSharesFor(
+                strategist,
+                feeStrategist,
+                _pool.add(totalGovernanceFee)
+            );
         }
     }
 }

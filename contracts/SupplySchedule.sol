@@ -11,6 +11,7 @@ import "@openzeppelin-contracts-upgradeable/utils/PausableUpgradeable.sol";
 import "@openzeppelin-contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 
 import "./lib/GlobalAccessControlManaged.sol";
+
 /**
 Supply schedules are defined in terms of Epochs
 
@@ -22,13 +23,14 @@ Epoch {
 }
 */
 contract SupplySchedule is GlobalAccessControlManaged {
-    bytes32 public constant CONTRACT_GOVERNANCE_ROLE = keccak256("CONTRACT_GOVERNANCE_ROLE");
+    bytes32 public constant CONTRACT_GOVERNANCE_ROLE =
+        keccak256("CONTRACT_GOVERNANCE_ROLE");
 
     struct SupplyEpoch {
-        uint amount;
-        uint startTime;
-        uint endTime;
-        uint duration;
+        uint256 amount;
+        uint256 startTime;
+        uint256 endTime;
+        uint256 duration;
     }
 
     function initialize(address _gac) public initializer {
@@ -37,15 +39,23 @@ contract SupplySchedule is GlobalAccessControlManaged {
 
     /// @dev Add emissions epoch. It is possible to have overlapping epochs.
     /// TODO base the epoch logic off of the tree schedule logic.
-    function addEpoch(uint amount, uint startTime, uint endTime, uint duration) external onlyRole(CONTRACT_GOVERNANCE_ROLE) gacPausable {
-
-    }
+    function addEpoch(
+        uint256 amount,
+        uint256 startTime,
+        uint256 endTime,
+        uint256 duration
+    ) external onlyRole(CONTRACT_GOVERNANCE_ROLE) gacPausable {}
 
     /// @dev Modify an existing epoch unilaterally. Past mint actions will nto be affected
-    function modifyEpoch(uint id, uint amount, uint startTime, uint endTime, uint duration) external onlyRole(CONTRACT_GOVERNANCE_ROLE) gacPausable {
+    function modifyEpoch(
+        uint256 id,
+        uint256 amount,
+        uint256 startTime,
+        uint256 endTime,
+        uint256 duration
+    ) external onlyRole(CONTRACT_GOVERNANCE_ROLE) gacPausable {}
 
-    }
-    function getMintable() external view returns (uint) {
+    function getMintable() external view returns (uint256) {
         return 0;
     }
 }

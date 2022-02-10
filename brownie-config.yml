@@ -16,8 +16,8 @@ compiler:
   solc:
     version: 0.6.12
     remappings:
-      - '@openzeppelin=OpenZeppelin/openzeppelin-contracts@3.4.0'
-      - '@openzeppelin-contracts-upgradeable=OpenZeppelin/openzeppelin-contracts-upgradeable@3.4.0/contracts/'
+      - "@openzeppelin=OpenZeppelin/openzeppelin-contracts@3.4.0"
+      - "@openzeppelin-contracts-upgradeable=OpenZeppelin/openzeppelin-contracts-upgradeable@3.4.0/contracts/"
 
 reports:
   exclude_contracts:

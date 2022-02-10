@@ -2,7 +2,9 @@
 pragma solidity 0.6.12;
 
 interface IVesting {
-    function setupVesting (address recipient,
+    function setupVesting(
+        address recipient,
         uint256 _amount,
-        uint256 _unlockBegin) external;
+        uint256 _unlockBegin
+    ) external;
 }

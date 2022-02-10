@@ -104,7 +104,6 @@ library BoringMath32 {
     }
 }
 
-
 /// @notice A library for performing overflow-/underflow-safe addition and subtraction on uint112.
 library BoringMath112 {
     function add(uint112 a, uint112 b) internal pure returns (uint112 c) {
@@ -118,7 +117,7 @@ library BoringMath112 {
     function mul(uint112 a, uint112 b) internal pure returns (uint112 c) {
         require(b == 0 || (c = a * b) / b == a, "BoringMath: Mul Overflow");
     }
-    
+
     function div(uint112 a, uint112 b) internal pure returns (uint112) {
         require(b > 0, "BoringMath: division by zero");
         return a / b;
@@ -138,7 +137,7 @@ library BoringMath224 {
     function mul(uint224 a, uint224 b) internal pure returns (uint224 c) {
         require(b == 0 || (c = a * b) / b == a, "BoringMath: Mul Overflow");
     }
-    
+
     function div(uint224 a, uint224 b) internal pure returns (uint224) {
         require(b > 0, "BoringMath: division by zero");
         return a / b;
