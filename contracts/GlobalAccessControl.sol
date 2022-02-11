@@ -44,6 +44,9 @@ contract GlobalAccessControl is
         keccak256("BLOCKLIST_MANAGER_ROLE");
     bytes32 public constant BLOCKLISTED_ROLE = keccak256("BLOCKLISTED_ROLE");
 
+    bytes32 public constant CITADEL_MINTER_ROLE =
+        keccak256("CITADEL_MINTER_ROLE");
+
     // Should the function transferFrom be disabled
     // NOTE: This is enforced at the contract level, the contract just allows the toggling of the bool
     bool public transferFromDisabled; // Set to true in initialize
@@ -61,6 +64,7 @@ contract GlobalAccessControl is
         _setRoleAdmin(PAUSER_ROLE, CONTRACT_GOVERNANCE_ROLE);
         _setRoleAdmin(UNPAUSER_ROLE, CONTRACT_GOVERNANCE_ROLE);
         _setRoleAdmin(BLOCKLIST_MANAGER_ROLE, CONTRACT_GOVERNANCE_ROLE);
+        _setRoleAdmin(CITADEL_MINTER_ROLE, CONTRACT_GOVERNANCE_ROLE);
 
         // BLOCKLIST is managed by BLOCKLIST_MANAGER
         _setRoleAdmin(BLOCKLISTED_ROLE, BLOCKLIST_MANAGER_ROLE);
