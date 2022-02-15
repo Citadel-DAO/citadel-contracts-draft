@@ -100,12 +100,12 @@ contract xCitadelLocker is
     address public stakingProxy = address(0);
     uint256 public constant stakeOffsetOnLock = 500; //allow broader range for staking when depositing
 
-    // ==========  ==========
-
     //management
     uint256 public kickRewardPerEpoch = 100;
     uint256 public kickRewardEpochDelay = 4;
 
+    // ==========  ==========
+    
     //shutdown
     bool public isShutdown = false;
 
@@ -151,17 +151,17 @@ contract xCitadelLocker is
 
     /* ========== ADMIN CONFIGURATION ========== */
 
+    // dev: useBoost is hardcoded to false to avoid boosting
     // Add a new reward token to be distributed to stakers
     function addReward(
         address _rewardsToken,
-        address _distributor,
-        bool _useBoost
+        address _distributor
     ) public onlyOwner {
         require(rewardData[_rewardsToken].lastUpdateTime == 0);
         rewardTokens.push(_rewardsToken);
         rewardData[_rewardsToken].lastUpdateTime = uint40(block.timestamp);
         rewardData[_rewardsToken].periodFinish = uint40(block.timestamp);
-        rewardData[_rewardsToken].useBoost = _useBoost;
+        rewardData[_rewardsToken].useBoost = false;
         rewardDistributors[_rewardsToken][_distributor] = true;
     }
 
@@ -225,10 +225,6 @@ contract xCitadelLocker is
 
     //shutdown the contract. unstake all tokens. release all locks
     function shutdown() external onlyOwner {
-        if (stakingProxy != address(0)) {
-            uint256 stakeBalance = IStakingProxy(stakingProxy).getBalance();
-            IStakingProxy(stakingProxy).withdraw(stakeBalance);
-        }
         isShutdown = true;
     }
 
@@ -642,6 +638,7 @@ contract xCitadelLocker is
         emit Staked(_account, _amount, lockAmount, boostedAmount);
     }
 
+    // dev: _checkDelay and _spendRatio are not being used to avoid kickrewards and boosting respectively
     // Withdraw all currently locked tokens where the unlock time has passed
     function _processExpiredLocks(
         address _account,
@@ -657,6 +654,7 @@ contract xCitadelLocker is
         uint112 boostedAmount;
         uint256 length = locks.length;
         uint256 reward = 0;
+        _checkDelay = 0; // hardcoding _checkDelay because we want no kickreward 
 
         if (
             isShutdown ||
@@ -668,28 +666,6 @@ contract xCitadelLocker is
 
             //dont delete, just set next index
             userBalance.nextUnlockIndex = length.to32();
-
-            //check for kick reward
-            //this wont have the exact reward rate that you would get if looped through
-            //but this section is supposed to be for quick and easy low gas processing of all locks
-            //we'll assume that if the reward was good enough someone would have processed at an earlier epoch
-            if (_checkDelay > 0) {
-                uint256 currentEpoch = block
-                    .timestamp
-                    .sub(_checkDelay)
-                    .div(rewardsDuration)
-                    .mul(rewardsDuration);
-                uint256 epochsover = currentEpoch
-                    .sub(uint256(locks[length - 1].unlockTime))
-                    .div(rewardsDuration);
-                uint256 rRate = MathUtil.min(
-                    kickRewardPerEpoch.mul(epochsover + 1),
-                    denominator
-                );
-                reward = uint256(locks[length - 1].amount).mul(rRate).div(
-                    denominator
-                );
-            }
         } else {
             //use a processed index(nextUnlockIndex) to not loop as much
             //deleting does not change array length
@@ -703,25 +679,6 @@ contract xCitadelLocker is
                 locked = locked.add(locks[i].amount);
                 boostedAmount = boostedAmount.add(locks[i].boosted);
 
-                //check for kick reward
-                //each epoch over due increases reward
-                if (_checkDelay > 0) {
-                    uint256 currentEpoch = block
-                        .timestamp
-                        .sub(_checkDelay)
-                        .div(rewardsDuration)
-                        .mul(rewardsDuration);
-                    uint256 epochsover = currentEpoch
-                        .sub(uint256(locks[i].unlockTime))
-                        .div(rewardsDuration);
-                    uint256 rRate = MathUtil.min(
-                        kickRewardPerEpoch.mul(epochsover + 1),
-                        denominator
-                    );
-                    reward = reward.add(
-                        uint256(locks[i].amount).mul(rRate).div(denominator)
-                    );
-                }
                 //set next unlock index
                 nextUnlockIndex++;
             }
@@ -737,26 +694,6 @@ contract xCitadelLocker is
         boostedSupply = boostedSupply.sub(boostedAmount);
 
         emit Withdrawn(_account, locked, _relock);
-
-        //send process incentive
-        if (reward > 0) {
-            //if theres a reward(kicked), it will always be a withdraw only
-            //preallocate enough cvx from stake contract to pay for both reward and withdraw
-            allocateCVXForTransfer(uint256(locked));
-
-            //reduce return amount by the kick reward
-            locked = locked.sub(reward.to112());
-
-            //transfer reward
-            transferCVX(_rewardAddress, reward, false);
-
-            emit KickReward(_rewardAddress, _account, reward);
-        } else if (_spendRatio > 0) {
-            //preallocate enough cvx to transfer the boost cost
-            allocateCVXForTransfer(
-                uint256(locked).mul(_spendRatio).div(denominator)
-            );
-        }
 
         //relock or return to user
         if (_relock) {
@@ -787,6 +724,7 @@ contract xCitadelLocker is
         _processExpiredLocks(msg.sender, _relock, 0, msg.sender, msg.sender, 0);
     }
 
+    // Non functional as no kick rewards
     function kickExpiredLocks(address _account) external nonReentrant {
         //allow kick after grace period of 'kickRewardEpochDelay'
         _processExpiredLocks(
@@ -814,11 +752,6 @@ contract xCitadelLocker is
         allocateCVXForTransfer(_amount);
         //transfer
         stakingToken.safeTransfer(_account, _amount);
-
-        //update staking
-        if (_updateStake) {
-            updateStakeRatio(0);
-        }
     }
 
     //calculate how much cvx should be staked. update if needed
