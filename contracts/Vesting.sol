@@ -16,8 +16,6 @@ contract Vesting is Initializable, OwnableUpgradeable {
     using SafeMathUpgradeable for uint256;
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
-    IERC20Upgradeable public token;
-
     struct VestingParams {
         uint256 unlockBegin;
         uint256 unlockEnd;
@@ -27,6 +25,7 @@ contract Vesting is Initializable, OwnableUpgradeable {
 
     address public vault;
     mapping(address => VestingParams) public vesting;
+    
     uint256 public constant VESTING_DURATION = 86400 * 21; // 21 days of vesting
 
     event Setup(
@@ -41,11 +40,7 @@ contract Vesting is Initializable, OwnableUpgradeable {
         uint256 amount
     );
 
-    /**
-     * @param _token The token this contract will lock
-     */
-    function initialize(address _token) public initializer {
-        token = IERC20Upgradeable(_token);
+    function initialize() external initializer {
         __Ownable_init();
     }
 
@@ -104,7 +99,7 @@ contract Vesting is Initializable, OwnableUpgradeable {
         return
             (
                 (locked.mul(block.timestamp.sub(vesting[owner].unlockBegin)))
-                    .div(vesting[owner].unlockEnd - vesting[owner].unlockBegin)
+                    .div(VESTING_DURATION)
             ).sub(claimed);
     }
 
@@ -122,7 +117,7 @@ contract Vesting is Initializable, OwnableUpgradeable {
             vesting[msg.sender].claimedAmounts = vesting[msg.sender]
                 .claimedAmounts
                 .add(amount);
-            token.safeTransfer(recipient, amount);
+            IERC20Upgradeable(vault).safeTransfer(recipient, amount);
             emit Claimed(msg.sender, recipient, amount);
         }
     }
