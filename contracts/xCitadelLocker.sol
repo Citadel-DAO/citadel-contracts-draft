@@ -57,19 +57,15 @@ contract xCitadelLocker is
     //token constants
     IERC20Upgradeable public stakingToken; // xCTDL token
 
-    // TODO: remove this
-    address public constant cvxCrv =
-        address(0x62B9c7356A2Dc64a1969e19C23e4f579F9810Aa7);
-
     //rewards
     address[] public rewardTokens;
     mapping(address => Reward) public rewardData;
 
     // Duration that rewards are streamed over
-    uint256 public constant rewardsDuration = 86400 * 7;
+    uint256 public constant rewardsDuration = 86400; // 1 day
 
     // Duration of lock/earned penalty period
-    uint256 public constant lockDuration = rewardsDuration * 17;
+    uint256 public constant lockDuration = rewardsDuration * 7 * 21; // 21 weeks
 
     // reward token -> distributor -> is approved to add rewards
     mapping(address => mapping(address => bool)) public rewardDistributors;
@@ -90,20 +86,21 @@ contract xCitadelLocker is
 
     //boost
     address public boostPayment =
-        address(0x1389388d01708118b497f59521f6943Be2541bb7); // TODO: change
+        address(0);
     uint256 public maximumBoostPayment = 0;
     uint256 public boostRate = 10000;
     uint256 public nextMaximumBoostPayment = 0;
     uint256 public nextBoostRate = 10000;
     uint256 public constant denominator = 10000;
 
+    // ========== Not used ==========
     //staking
     uint256 public minimumStake = 10000;
     uint256 public maximumStake = 10000;
-    address public stakingProxy;
-    address public constant cvxcrvStaking =
-        address(0x3Fe65692bfCD0e6CF84cB1E7d24108E434A7587e); // TODO: change
+    address public stakingProxy = address(0);
     uint256 public constant stakeOffsetOnLock = 500; //allow broader range for staking when depositing
+
+    // ==========  ==========
 
     //management
     uint256 public kickRewardPerEpoch = 100;
@@ -161,7 +158,6 @@ contract xCitadelLocker is
         bool _useBoost
     ) public onlyOwner {
         require(rewardData[_rewardsToken].lastUpdateTime == 0);
-        require(_rewardsToken != address(stakingToken));
         rewardTokens.push(_rewardsToken);
         rewardData[_rewardsToken].lastUpdateTime = uint40(block.timestamp);
         rewardData[_rewardsToken].periodFinish = uint40(block.timestamp);
@@ -234,15 +230,6 @@ contract xCitadelLocker is
             IStakingProxy(stakingProxy).withdraw(stakeBalance);
         }
         isShutdown = true;
-    }
-
-    //set approvals for staking cvx and cvxcrv
-    function setApprovals() external {
-        IERC20Upgradeable(cvxCrv).safeApprove(cvxcrvStaking, 0);
-        IERC20Upgradeable(cvxCrv).safeApprove(cvxcrvStaking, uint256(-1));
-
-        IERC20Upgradeable(stakingToken).safeApprove(stakingProxy, 0);
-        IERC20Upgradeable(stakingToken).safeApprove(stakingProxy, uint256(-1));
     }
 
     /* ========== VIEWS ========== */
@@ -651,15 +638,7 @@ contract xCitadelLocker is
         //update epoch supply, epoch checkpointed above so safe to add to latest
         Epoch storage e = epochs[epochs.length - 1];
         e.supply = e.supply.add(uint224(boostedAmount));
-
-        //send boost payment
-        if (spendAmount > 0) {
-            stakingToken.safeTransfer(boostPayment, spendAmount);
-        }
-
-        //update staking, allow a bit of leeway for smaller deposits to reduce gas
-        updateStakeRatio(stakeOffsetOnLock);
-
+        
         emit Staked(_account, _amount, lockAmount, boostedAmount);
     }
 
@@ -781,9 +760,9 @@ contract xCitadelLocker is
 
         //relock or return to user
         if (_relock) {
-            _lock(_withdrawTo, locked, _spendRatio);
+            _lock(_withdrawTo, locked, 0);
         } else {
-            transferCVX(_withdrawTo, locked, true);
+            transferCVX(_withdrawTo, locked, false);
         }
     }
 
@@ -823,9 +802,6 @@ contract xCitadelLocker is
     //pull required amount of cvx from staking for an upcoming transfer
     function allocateCVXForTransfer(uint256 _amount) internal {
         uint256 balance = stakingToken.balanceOf(address(this));
-        if (_amount > balance) {
-            IStakingProxy(stakingProxy).withdraw(_amount.sub(balance));
-        }
     }
 
     //transfer helper: pull enough from staking, transfer, updating staking ratio
@@ -884,15 +860,11 @@ contract xCitadelLocker is
             address _rewardsToken = rewardTokens[i];
             uint256 reward = rewards[_account][_rewardsToken];
             if (reward > 0) {
-                rewards[_account][_rewardsToken] = 0;
-                if (_rewardsToken == cvxCrv && _stake) {
-                    IRewardStaking(cvxcrvStaking).stakeFor(_account, reward);
-                } else {
-                    IERC20Upgradeable(_rewardsToken).safeTransfer(
-                        _account,
-                        reward
-                    );
-                }
+                rewards[_account][_rewardsToken] = 0;            
+                IERC20Upgradeable(_rewardsToken).safeTransfer(
+                    _account,
+                    reward
+                );
                 emit RewardPaid(_account, _rewardsToken, reward);
             }
         }
@@ -943,11 +915,6 @@ contract xCitadelLocker is
         );
 
         emit RewardAdded(_rewardsToken, _reward);
-
-        if (_rewardsToken == cvxCrv) {
-            //update staking ratio if main reward
-            updateStakeRatio(0);
-        }
     }
 
     // Added to support recovering LP Rewards from other systems such as BAL to be distributed to holders
