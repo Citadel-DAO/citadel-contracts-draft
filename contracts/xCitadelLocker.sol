@@ -83,7 +83,8 @@ contract xCitadelLocker is
     //mappings for balance data
     mapping(address => Balances) public balances;
     mapping(address => LockedBalance[]) public userLocks;
-
+    
+    // ========== Not used ==========
     //boost
     address public boostPayment =
         address(0);
@@ -93,7 +94,6 @@ contract xCitadelLocker is
     uint256 public nextBoostRate = 10000;
     uint256 public constant denominator = 10000;
 
-    // ========== Not used ==========
     //staking
     uint256 public minimumStake = 10000;
     uint256 public maximumStake = 10000;
@@ -105,7 +105,6 @@ contract xCitadelLocker is
     uint256 public kickRewardEpochDelay = 4;
 
     // ==========  ==========
-    
     //shutdown
     bool public isShutdown = false;
 
