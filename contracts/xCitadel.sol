@@ -144,7 +144,7 @@ contract xCitadel is
     event SetMaxPerformanceFee(uint256 newMaxPerformanceFee);
     event SetMaxManagementFee(uint256 newMaxManagementFee);
     event SetGuardian(address indexed newGuardian);
-    event SetGuardian(address indexed newVesting);
+    event SetVesting(address indexed newVesting);
     event SetGuestList(address indexed newGuestList);
     event SetWithdrawalFee(uint256 newWithdrawalFee);
     event SetPerformanceFeeStrategist(uint256 newPerformanceFeeStrategist);
@@ -572,7 +572,7 @@ contract xCitadel is
     /// @notice Changes the vesting contract address.
     ///         Vesting contract is used to vest withdrawn tokens linearly over period of 21 days
     ///         This can only be called by governance.
-    /// @param _guardian Address of the new guardian.
+    /// @param _vesting Address of the new guardian.
     function setVesting(address _vesting) external {
         _onlyGovernance();
         require(_vesting != address(0), "Address cannot be 0x0");

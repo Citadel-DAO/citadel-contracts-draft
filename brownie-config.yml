@@ -10,6 +10,7 @@ autofetch_sources: True
 dependencies:
   - OpenZeppelin/openzeppelin-contracts@3.4.0
   - OpenZeppelin/openzeppelin-contracts-upgradeable@3.4.0
+  - Badger-Finance/badger-sett-1.5@rc.2
 
 # path remapping to support imports from GitHub/NPM
 compiler:
@@ -18,6 +19,7 @@ compiler:
     remappings:
       - "@openzeppelin=OpenZeppelin/openzeppelin-contracts@3.4.0"
       - "@openzeppelin-contracts-upgradeable=OpenZeppelin/openzeppelin-contracts-upgradeable@3.4.0/contracts/"
+      - "@badger-finance=Badger-Finance/badger-sett-1.5@rc.2/contracts/"
 
 reports:
   exclude_contracts:
