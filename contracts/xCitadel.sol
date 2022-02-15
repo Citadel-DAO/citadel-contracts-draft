@@ -13,7 +13,7 @@ import "@openzeppelin-contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol
 import "./lib/SettAccessControl.sol";
 
 import {IVault} from "../interfaces/badger/IVault.sol";
-import {IVesting} from "../interfaces/IVesting.sol";
+import {IVesting} from "../interfaces/citadel/IVesting.sol";
 import {IStrategy} from "../interfaces/badger/IStrategy.sol";
 import {IERC20Detailed} from "../interfaces/erc20/IERC20Detailed.sol";
 import {BadgerGuestListAPI} from "../interfaces/yearn/BadgerGuestlistApi.sol";
@@ -174,6 +174,7 @@ contract xCitadel is
         address _treasury,
         address _strategist,
         address _badgerTree,
+        address _minter,
         string memory _name,
         string memory _symbol,
         uint256[4] memory _feeConfig
