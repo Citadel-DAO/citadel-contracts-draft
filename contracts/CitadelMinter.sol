@@ -43,16 +43,16 @@ contract CitadelMinter is GlobalAccessControlManaged {
 
     function initialize(
         address _gac,
-        ISupplySchedule _supplySchedule,
-        IERC20Upgradeable _citadelToken,
-        IxCitadel _xCitadel
+        address _supplySchedule,
+        address _citadelToken,
+        address _xCitadel
     ) external initializer {
         __GlobalAccessControlManaged_init(_gac);
-        supplySchedule = _supplySchedule;
-        citadelToken = _citadelToken;
-        xCitadel = _xCitadel;
+        supplySchedule = ISupplySchedule(_supplySchedule);
+        citadelToken = IERC20Upgradeable(_citadelToken);
+        xCitadel = IxCitadel(_xCitadel);
 
-        emit SupplyScheduleSet(_supplySchedule);
+        emit SupplyScheduleSet(supplySchedule);
     }
 
     function mintAndDistribute(
@@ -68,8 +68,9 @@ contract CitadelMinter is GlobalAccessControlManaged {
         );
 
         uint256 toMint = supplySchedule.getMintable();
-        // citadelToken.mint(toMint);
 
+        // citadelToken.mint(address(this), toMint);
+        
         uint256 toStakersBps = MAX_BPS;
         uint256 toLockersBps = MAX_BPS;
         uint256 toFundingBps = MAX_BPS;
@@ -90,6 +91,27 @@ contract CitadelMinter is GlobalAccessControlManaged {
 
         // Modify emission schedule for Lockers
         // citadelToken.notifyRewardAmount(toFundingAmount, policyDestination);
+
+        // lets say -  
+        // reward rate = prev_reward
+        // finish time t > block.timestamp
+        // 5 / 1 day = reward rate
+        // after half a day we (finish_time - block.timestamp)
+        // 2.5 = 0.5 + 1.5
+        // so now whenever we update the reward rate it changes from the current timestamp
+        // get the existing reward data
+        // RewardData data = xCitadelLocker.rewardData(address)
+
+        // if (data.finish_time < block.timestamp) {
+        //     // whatever rate we want to set * ( rewardDuration )
+        // } else {
+        //     // change reward rate 
+        //     // remainingTime = data.finish_time - block.timestamp
+        //     // leftRewards = data.rewardRate * remainingTime
+        //     // now whatever reward rate we want 
+        //     // (amount to transfer + leftRewards) / rewards Duration
+        //     // the reward rate changes immediately for the next reward duration
+        // }
     }
 
     /// @dev Highest governance level may swap out the supply schedule contract.
