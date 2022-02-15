@@ -38,6 +38,8 @@ contract CitadelMinter is GlobalAccessControlManaged {
 
     address public citadelToken;
     address public xCitadel;
+    // The minted tokens allocated to funding will be sent to the policy operations manager
+    address public policyDestination;
     ISupplySchedule public supplySchedule;
     IxCitadelLocker public xCitadelLocker;
 
@@ -50,7 +52,8 @@ contract CitadelMinter is GlobalAccessControlManaged {
         address _supplySchedule,
         address _citadelToken,
         address _xCitadel,
-        address _xCitadelLocker
+        address _xCitadelLocker,
+        address _policyDestination
     ) external initializer {
         __GlobalAccessControlManaged_init(_gac);
         
@@ -58,6 +61,7 @@ contract CitadelMinter is GlobalAccessControlManaged {
         citadelToken = _citadelToken;
         xCitadel = _xCitadel;
         xCitadelLocker = IxCitadelLocker(_xCitadelLocker);
+        policyDestination = _policyDestination;
 
         emit SupplyScheduleSet(supplySchedule);
     }
@@ -76,11 +80,6 @@ contract CitadelMinter is GlobalAccessControlManaged {
         ICitadelToken(citadelToken).mint(address(this), toMint);
 
         if (_fundingAmount != 0) {
-            // The minted tokens allocated to funding will be sent to the policy operations manager
-            address policyDestination = gac.getRoleMember(
-                POLICY_OPERATIONS_ROLE,
-                0
-            );
             // Send funder amount to policy operations for distribution
             if (policyDestination != address(0)) {
                 IERC20Upgradeable(citadelToken).safeTransfer(policyDestination, _fundingAmount);
