@@ -144,6 +144,7 @@ contract xCitadel is
     event SetMaxPerformanceFee(uint256 newMaxPerformanceFee);
     event SetMaxManagementFee(uint256 newMaxManagementFee);
     event SetGuardian(address indexed newGuardian);
+    event SetGuardian(address indexed newVesting);
     event SetGuestList(address indexed newGuestList);
     event SetWithdrawalFee(uint256 newWithdrawalFee);
     event SetPerformanceFeeStrategist(uint256 newPerformanceFeeStrategist);
@@ -174,7 +175,7 @@ contract xCitadel is
         address _treasury,
         address _strategist,
         address _badgerTree,
-        address _minter,
+        address _vesting,
         string memory _name,
         string memory _symbol,
         uint256[4] memory _feeConfig
@@ -186,6 +187,7 @@ contract xCitadel is
         require(_treasury != address(0)); // dev: _treasury address should not be zero
         require(_strategist != address(0)); // dev: _strategist address should not be zero
         require(_badgerTree != address(0)); // dev: _badgerTree address should not be zero
+        require(_vesting != address(0)); // dev: _vesting address should not be zero
 
         // Check for fees being reasonable (see below for interpretation)
         require(
@@ -241,6 +243,7 @@ contract xCitadel is
         keeper = _keeper;
         guardian = _guardian;
         badgerTree = _badgerTree;
+        vesting = _vesting;
 
         lastHarvestedAt = block.timestamp; // setting initial value to the time when the vault was deployed
 
@@ -564,6 +567,18 @@ contract xCitadel is
 
         guardian = _guardian;
         emit SetGuardian(_guardian);
+    }
+
+    /// @notice Changes the vesting contract address.
+    ///         Vesting contract is used to vest withdrawn tokens linearly over period of 21 days
+    ///         This can only be called by governance.
+    /// @param _guardian Address of the new guardian.
+    function setVesting(address _vesting) external {
+        _onlyGovernance();
+        require(_vesting != address(0), "Address cannot be 0x0");
+
+        vesting = _vesting;
+        emit SetVesting(_vesting);
     }
 
     /// ===== Permissioned Functions: Trusted Actors =====
