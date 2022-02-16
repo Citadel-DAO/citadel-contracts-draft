@@ -40,16 +40,12 @@ contract CitadelMinter is GlobalAccessControlManaged {
     address public xCitadel;
     // The minted tokens allocated to funding will be sent to the policy operations manager
     address public policyDestination;
-    ISupplySchedule public supplySchedule;
     IxCitadelLocker public xCitadelLocker;
 
     uint256 constant MAX_BPS = 10000;
 
-    event SupplyScheduleSet(ISupplySchedule supplySchedule);
-
     function initialize(
         address _gac,
-        address _supplySchedule,
         address _citadelToken,
         address _xCitadel,
         address _xCitadelLocker,
@@ -57,13 +53,10 @@ contract CitadelMinter is GlobalAccessControlManaged {
     ) external initializer {
         __GlobalAccessControlManaged_init(_gac);
         
-        supplySchedule = ISupplySchedule(_supplySchedule);
         citadelToken = _citadelToken;
         xCitadel = _xCitadel;
         xCitadelLocker = IxCitadelLocker(_xCitadelLocker);
         policyDestination = _policyDestination;
-
-        emit SupplyScheduleSet(supplySchedule);
     }
 
     function mintAndDistribute(
@@ -95,15 +88,5 @@ contract CitadelMinter is GlobalAccessControlManaged {
             IxCitadel(xCitadel).deposit(_lockingAmount);
             xCitadelLocker.notifyRewardAmount(xCitadel, _lockingAmount);
         }
-    }
-
-    /// @dev Highest governance level may swap out the supply schedule contract.
-    function setSupplySchedule(ISupplySchedule _newSupplySchedule)
-        external
-        onlyRole(CONTRACT_GOVERNANCE_ROLE)
-        gacPausable
-    {
-        supplySchedule = _newSupplySchedule;
-        emit SupplyScheduleSet(_newSupplySchedule);
     }
 }
