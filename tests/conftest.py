@@ -11,7 +11,6 @@ def minter(CitadelMinter, citadel_token, xCitadel, locker, gac, deployer, policy
     minter = CitadelMinter.deploy({"from": deployer})
     minter.initialize(
         gac.address,
-        ADDRESS_ZERO, # currently supplySchedule address is set to 0
         citadel_token.address,
         xCitadel.address,
         locker.address,
@@ -81,6 +80,8 @@ def locker(xCitadelLocker, xCitadel, deployer):
         "veCitadel",
         "veCTDL"
     )
+    Locker.addReward(xCitadel.address, deployer)
+    
     yield Locker
 
 ### ACTORS ###

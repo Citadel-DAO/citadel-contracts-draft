@@ -12,7 +12,7 @@ from helpers.utils import (
 amount = 1e18
 VESTING_TIME = 864000 # 10 days
 
-def test_stake_withdraw_flow(citadel_token, deployer, rando, gac, xCitadel, vesting, locker):
+def test_stake_withdraw_flow(citadel_token, gac, xCitadel, vesting, deployer, rando):
 
     # gives deployer citadel minting rights
     gac.grantRole(CITADEL_MINTER_ROLE, deployer.address)
