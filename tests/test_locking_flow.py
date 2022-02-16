@@ -38,6 +38,8 @@ def test_locking_flow(citadel_token, deployer, rando, gac, xCitadel, locker):
     assert locker.lockedBalanceOf(rando.address) == amount
 
     ## mint some rewards for xCitadelLocker - 1 xCTDL / day
+    locker.addReward(xCitadel.address, deployer, {"from": deployer})
+
     citadel_token.mint(deployer, 10*amount, {"from": deployer})
     citadel_token.approve(xCitadel, MAX_UINT256, {"from": deployer})
     xCitadel.deposit(10*amount, {"from": deployer})
@@ -58,3 +60,13 @@ def test_locking_flow(citadel_token, deployer, rando, gac, xCitadel, locker):
     post_xCitadel_balance = xCitadel.balanceOf(rando)
 
     assert post_xCitadel_balance - prev_xCitadel_balance == claimableRewards
+
+    # sleep for 21 weeks
+    chain.sleep(12700800)
+    chain.mine()
+
+    prev_xCitadel_balance = xCitadel.balanceOf(rando)
+    locker.processExpiredLocks(False, {"from": rando})
+    post_xCitadel_balance = xCitadel.balanceOf(rando)
+
+    assert post_xCitadel_balance - prev_xCitadel_balance > 0

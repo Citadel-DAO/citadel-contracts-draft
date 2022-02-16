@@ -80,7 +80,6 @@ def locker(xCitadelLocker, xCitadel, deployer):
         "veCitadel",
         "veCTDL"
     )
-    Locker.addReward(xCitadel.address, deployer)
     
     yield Locker
 
@@ -101,3 +100,7 @@ def policy_destionation(accounts):
 @pytest.fixture()
 def rando(accounts):
     yield accounts[3]
+
+@pytest.fixture(autouse=True)
+def isolation(fn_isolation):
+    pass
