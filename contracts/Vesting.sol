@@ -23,6 +23,7 @@ contract Vesting is Initializable, OwnableUpgradeable {
         uint256 claimedAmounts;
     }
 
+    IERC20Upgradeable public vestingToken;
     address public vault;
     mapping(address => VestingParams) public vesting;
     
@@ -40,8 +41,12 @@ contract Vesting is Initializable, OwnableUpgradeable {
         uint256 amount
     );
 
-    function initialize() external initializer {
+    function initialize(address _vestingToken) external initializer {
+        require(_vestingToken != address(0), "Address zero invalid");
+        
         __Ownable_init();
+        
+        vestingToken = IERC20Upgradeable(_vestingToken);
     }
 
     /**
@@ -49,7 +54,7 @@ contract Vesting is Initializable, OwnableUpgradeable {
      * @param _vault address of xCTDL vault contract
      */
     function setVault(address _vault) external onlyOwner {
-        require(vault != address(0), "xCTDL Vault: Null address");
+        require(_vault != address(0), "xCTDL Vault: Null address");
         vault = _vault;
     }
 
@@ -117,7 +122,7 @@ contract Vesting is Initializable, OwnableUpgradeable {
             vesting[msg.sender].claimedAmounts = vesting[msg.sender]
                 .claimedAmounts
                 .add(amount);
-            IERC20Upgradeable(vault).safeTransfer(recipient, amount);
+            vestingToken.safeTransfer(recipient, amount);
             emit Claimed(msg.sender, recipient, amount);
         }
     }
