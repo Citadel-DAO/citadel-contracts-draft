@@ -57,6 +57,11 @@ contract CitadelMinter is GlobalAccessControlManaged {
         xCitadel = _xCitadel;
         xCitadelLocker = IxCitadelLocker(_xCitadelLocker);
         policyDestination = _policyDestination;
+
+        // Approve xCitadel vault for use of citadel tokens
+        IERC20Upgradeable(citadelToken).approve(xCitadel, 2**256 - 1);
+        // Approve xCitadel for locker to use
+        IERC20Upgradeable(xCitadel).approve(_xCitadelLocker, 2**256 - 1);
     }
 
     function mintAndDistribute(
