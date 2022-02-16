@@ -52,7 +52,7 @@ contract CitadelMinter is GlobalAccessControlManaged {
         address _policyDestination
     ) external initializer {
         __GlobalAccessControlManaged_init(_gac);
-        
+
         citadelToken = _citadelToken;
         xCitadel = _xCitadel;
         xCitadelLocker = IxCitadelLocker(_xCitadelLocker);
@@ -74,22 +74,25 @@ contract CitadelMinter is GlobalAccessControlManaged {
         if (toMint == 0) {
             return;
         }
-        
+
         ICitadelToken(citadelToken).mint(address(this), toMint);
 
         if (_fundingAmount != 0) {
             // Send funder amount to policy operations for distribution
             if (policyDestination != address(0)) {
-                IERC20Upgradeable(citadelToken).safeTransfer(policyDestination, _fundingAmount);
+                IERC20Upgradeable(citadelToken).safeTransfer(
+                    policyDestination,
+                    _fundingAmount
+                );
             }
         }
-        
+
         if (_stakingAmount != 0) {
             // Auto-compound staker amount into xCTDL
             IERC20Upgradeable(citadelToken).transfer(xCitadel, _stakingAmount);
         }
 
-        if (_lockingAmount != 0 ) {
+        if (_lockingAmount != 0) {
             IxCitadel(xCitadel).deposit(_lockingAmount);
             xCitadelLocker.notifyRewardAmount(xCitadel, _lockingAmount);
         }

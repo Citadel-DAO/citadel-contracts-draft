@@ -7,11 +7,11 @@ import {BaseStrategy} from "@badger-finance/BaseStrategy.sol";
 
 // Non functional Strategy for xCitadel Vault
 contract MyStrategy is BaseStrategy {
-// address public want; // Inherited from BaseStrategy
+    // address public want; // Inherited from BaseStrategy
     // address public lpComponent; // Token that represents ownership in a pool, not always used
     // address public reward; // Token we farm
 
-    // address constant public BADGER = 0x3472A5A71965499acd81997a54BBA8D852C6E53d; 
+    // address constant public BADGER = 0x3472A5A71965499acd81997a54BBA8D852C6E53d;
 
     /// @dev Initialize the Strategy with security settings as well as tokens
     /// @notice Proxies will set any non constant variable you declare as default value
@@ -20,7 +20,7 @@ contract MyStrategy is BaseStrategy {
         __BaseStrategy_init(_vault);
         /// @dev Add config here
         want = _want;
-        
+
         // If you need to set new values that are not constants, set them like so
         // stakingContract = 0x79ba8b76F61Db3e7D994f7E384ba8f7870A043b7;
 
@@ -30,7 +30,7 @@ contract MyStrategy is BaseStrategy {
         //     type(uint256).max
         // );
     }
-    
+
     /// @dev Return the name of the strategy
     function getName() external pure override returns (string memory) {
         return "xCitadel-Strategy";
@@ -39,7 +39,13 @@ contract MyStrategy is BaseStrategy {
     /// @dev Return a list of protected tokens
     /// @notice It's very important all tokens that are meant to be in the strategy to be marked as protected
     /// @notice this provides security guarantees to the depositors they can't be sweeped away
-    function getProtectedTokens() public view virtual override returns (address[] memory) {
+    function getProtectedTokens()
+        public
+        view
+        virtual
+        override
+        returns (address[] memory)
+    {
         address[] memory protectedTokens = new address[](2);
         // protectedTokens[0] = want;
         // protectedTokens[1] = BADGER;
@@ -58,17 +64,24 @@ contract MyStrategy is BaseStrategy {
 
     /// @dev Withdraw `_amount` of want, so that it can be sent to the vault / depositor
     /// @notice just unlock the funds and return the amount you could unlock
-    function _withdrawSome(uint256 _amount) internal override returns (uint256) {
+    function _withdrawSome(uint256 _amount)
+        internal
+        override
+        returns (uint256)
+    {
         return _amount;
     }
 
-
     /// @dev Does this function require `tend` to be called?
-    function _isTendable() internal override pure returns (bool) {
+    function _isTendable() internal pure override returns (bool) {
         return false; // Change to true if the strategy should be tended
     }
 
-    function _harvest() internal override returns (TokenAmount[] memory harvested) {
+    function _harvest()
+        internal
+        override
+        returns (TokenAmount[] memory harvested)
+    {
         // No-op as we don't do anything with funds
         // use autoCompoundRatio here to convert rewards to want ...
 
@@ -83,9 +96,8 @@ contract MyStrategy is BaseStrategy {
         // return harvested;
     }
 
-
     // Example tend is a no-op which returns the values, could also just revert
-    function _tend() internal override returns (TokenAmount[] memory tended){
+    function _tend() internal override returns (TokenAmount[] memory tended) {
         // Nothing tended
         tended = new TokenAmount[](2);
     }
@@ -97,7 +109,12 @@ contract MyStrategy is BaseStrategy {
 
     /// @dev Return the balance of rewards that the strategy has accrued
     /// @notice Used for offChain APY and Harvest Health monitoring
-    function balanceOfRewards() external view override returns (TokenAmount[] memory rewards) {
+    function balanceOfRewards()
+        external
+        view
+        override
+        returns (TokenAmount[] memory rewards)
+    {
         // Rewards are 0
         rewards = new TokenAmount[](2);
     }

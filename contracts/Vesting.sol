@@ -7,7 +7,6 @@ import "@openzeppelin-contracts-upgradeable/proxy/Initializable.sol";
 import "@openzeppelin-contracts-upgradeable/math/SafeMathUpgradeable.sol";
 import "@openzeppelin-contracts-upgradeable/token/ERC20/SafeERC20Upgradeable.sol";
 
-
 /**
  * @dev Time-locks tokens according to an unlock schedule.
  */
@@ -26,7 +25,7 @@ contract Vesting is Initializable, OwnableUpgradeable {
     IERC20Upgradeable public vestingToken;
     address public vault;
     mapping(address => VestingParams) public vesting;
-    
+
     uint256 public constant VESTING_DURATION = 86400 * 21; // 21 days of vesting
 
     event Setup(
@@ -43,9 +42,9 @@ contract Vesting is Initializable, OwnableUpgradeable {
 
     function initialize(address _vestingToken) external initializer {
         require(_vestingToken != address(0), "Address zero invalid");
-        
+
         __Ownable_init();
-        
+
         vestingToken = IERC20Upgradeable(_vestingToken);
     }
 
@@ -91,11 +90,7 @@ contract Vesting is Initializable, OwnableUpgradeable {
      * @param owner The account to check the claimable balance of.
      * @return The number of tokens currently claimable.
      */
-    function claimableBalance(address owner)
-        public
-        view
-        returns (uint256)
-    {
+    function claimableBalance(address owner) public view returns (uint256) {
         uint256 locked = vesting[owner].lockedAmounts;
         uint256 claimed = vesting[owner].claimedAmounts;
         if (block.timestamp >= vesting[owner].unlockEnd) {

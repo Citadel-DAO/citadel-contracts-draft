@@ -83,11 +83,10 @@ contract xCitadelLocker is
     //mappings for balance data
     mapping(address => Balances) public balances;
     mapping(address => LockedBalance[]) public userLocks;
-    
+
     // ========== Not used ==========
     //boost
-    address public boostPayment =
-        address(0);
+    address public boostPayment = address(0);
     uint256 public maximumBoostPayment = 0;
     uint256 public boostRate = 10000;
     uint256 public nextMaximumBoostPayment = 0;
@@ -152,10 +151,10 @@ contract xCitadelLocker is
 
     // dev: useBoost is hardcoded to false to avoid boosting
     // Add a new reward token to be distributed to stakers
-    function addReward(
-        address _rewardsToken,
-        address _distributor
-    ) public onlyOwner {
+    function addReward(address _rewardsToken, address _distributor)
+        public
+        onlyOwner
+    {
         require(rewardData[_rewardsToken].lastUpdateTime == 0);
         rewardTokens.push(_rewardsToken);
         rewardData[_rewardsToken].lastUpdateTime = uint40(block.timestamp);
@@ -633,7 +632,7 @@ contract xCitadelLocker is
         //update epoch supply, epoch checkpointed above so safe to add to latest
         Epoch storage e = epochs[epochs.length - 1];
         e.supply = e.supply.add(uint224(boostedAmount));
-        
+
         emit Staked(_account, _amount, lockAmount, boostedAmount);
     }
 
@@ -653,7 +652,7 @@ contract xCitadelLocker is
         uint112 boostedAmount;
         uint256 length = locks.length;
         uint256 reward = 0;
-        _checkDelay = 0; // hardcoding _checkDelay because we want no kickreward 
+        _checkDelay = 0; // hardcoding _checkDelay because we want no kickreward
 
         if (
             isShutdown ||
@@ -792,11 +791,8 @@ contract xCitadelLocker is
             address _rewardsToken = rewardTokens[i];
             uint256 reward = rewards[_account][_rewardsToken];
             if (reward > 0) {
-                rewards[_account][_rewardsToken] = 0;            
-                IERC20Upgradeable(_rewardsToken).safeTransfer(
-                    _account,
-                    reward
-                );
+                rewards[_account][_rewardsToken] = 0;
+                IERC20Upgradeable(_rewardsToken).safeTransfer(_account, reward);
                 emit RewardPaid(_account, _rewardsToken, reward);
             }
         }
