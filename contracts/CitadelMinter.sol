@@ -51,6 +51,12 @@ contract CitadelMinter is GlobalAccessControlManaged {
         address _xCitadelLocker,
         address _policyDestination
     ) external initializer {
+        require(_gac != address(0), "address 0 invalid");
+        require(_citadelToken != address(0), "address 0 invalid");
+        require(_xCitadel != address(0), "address 0 invalid");
+        require(_xCitadelLocker != address(0), "address 0 invalid");
+        require(_policyDestination != address(0), "address 0 invalid");
+
         __GlobalAccessControlManaged_init(_gac);
 
         citadelToken = _citadelToken;
@@ -77,24 +83,29 @@ contract CitadelMinter is GlobalAccessControlManaged {
 
         ICitadelToken(citadelToken).mint(address(this), toMint);
 
-        if (_fundingAmount != 0) {
-            // Send funder amount to policy operations for distribution
-            if (policyDestination != address(0)) {
-                IERC20Upgradeable(citadelToken).safeTransfer(
-                    policyDestination,
-                    _fundingAmount
-                );
-            }
-        }
-
         if (_stakingAmount != 0) {
             // Auto-compound staker amount into xCTDL
             IERC20Upgradeable(citadelToken).transfer(xCitadel, _stakingAmount);
         }
 
+        if (_fundingAmount != 0) {
+            uint256 _before = IERC20Upgradeable(xCitadel).balanceOf(address(this));
+            IxCitadel(xCitadel).deposit(_fundingAmount);
+            uint256 _after = IERC20Upgradeable(xCitadel).balanceOf(address(this));
+            
+            // Send funder amount to policy operations for distribution
+            IERC20Upgradeable(xCitadel).safeTransfer(
+                policyDestination,
+                _after.sub(_before)
+            );
+        }
+
         if (_lockingAmount != 0) {
+            uint256 beforeAmount = IERC20Upgradeable(xCitadel).balanceOf(address(this));
             IxCitadel(xCitadel).deposit(_lockingAmount);
-            xCitadelLocker.notifyRewardAmount(xCitadel, _lockingAmount);
+            uint256 afterAmount = IERC20Upgradeable(xCitadel).balanceOf(address(this));
+
+            xCitadelLocker.notifyRewardAmount(xCitadel, afterAmount.sub(beforeAmount));
         }
     }
 }

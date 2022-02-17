@@ -25,6 +25,9 @@ def test_minting_flow(
 
     minter.mintAndDistribute(amount, amount, amount, {"from": policy_operator})
 
-    assert citadel_token.balanceOf(xCitadel) == 2 * amount
-    assert citadel_token.balanceOf(policy_destionation) == amount
-    assert xCitadel.balanceOf(locker) == amount
+    assert citadel_token.balanceOf(xCitadel) == 3 * amount
+    # policy_destionation balance of xCitadel should be equal to amount
+    # as currently the vault has no deposits 
+    assert xCitadel.balanceOf(policy_destionation) == amount
+    # as ppfs = 0.5 ether therefore xCitadel balance of locker will be 0.5 xCitadel
+    assert xCitadel.balanceOf(locker) == 0.5 * amount
