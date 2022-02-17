@@ -220,8 +220,9 @@ contract TokenSaleUpgradeable is OwnableUpgradeable, PausableUpgradeable {
         view
         returns (uint256 tokenOutAmount_)
     {
-        tokenOutAmount_ =
-            (_tokenInAmount.mul(10**tokenOut.decimals())).div(tokenOutPrice);
+        tokenOutAmount_ = (_tokenInAmount.mul(10**tokenOut.decimals())).div(
+            tokenOutPrice
+        );
     }
 
     /**
@@ -357,7 +358,9 @@ contract TokenSaleUpgradeable is OwnableUpgradeable, PausableUpgradeable {
         uint256 amount = ERC20Upgradeable(_token).balanceOf(address(this));
 
         if (_token == address(tokenOut)) {
-            uint256 amountLeftToBeClaimed = totalTokenOutBought.sub(totalTokenOutClaimed);
+            uint256 amountLeftToBeClaimed = totalTokenOutBought.sub(
+                totalTokenOutClaimed
+            );
             amount = amount.sub(amountLeftToBeClaimed);
         }
 

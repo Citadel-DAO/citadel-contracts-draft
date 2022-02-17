@@ -89,10 +89,14 @@ contract CitadelMinter is GlobalAccessControlManaged {
         }
 
         if (_fundingAmount != 0) {
-            uint256 _before = IERC20Upgradeable(xCitadel).balanceOf(address(this));
+            uint256 _before = IERC20Upgradeable(xCitadel).balanceOf(
+                address(this)
+            );
             IxCitadel(xCitadel).deposit(_fundingAmount);
-            uint256 _after = IERC20Upgradeable(xCitadel).balanceOf(address(this));
-            
+            uint256 _after = IERC20Upgradeable(xCitadel).balanceOf(
+                address(this)
+            );
+
             // Send funder amount to policy operations for distribution
             IERC20Upgradeable(xCitadel).safeTransfer(
                 policyDestination,
@@ -101,11 +105,18 @@ contract CitadelMinter is GlobalAccessControlManaged {
         }
 
         if (_lockingAmount != 0) {
-            uint256 beforeAmount = IERC20Upgradeable(xCitadel).balanceOf(address(this));
+            uint256 beforeAmount = IERC20Upgradeable(xCitadel).balanceOf(
+                address(this)
+            );
             IxCitadel(xCitadel).deposit(_lockingAmount);
-            uint256 afterAmount = IERC20Upgradeable(xCitadel).balanceOf(address(this));
+            uint256 afterAmount = IERC20Upgradeable(xCitadel).balanceOf(
+                address(this)
+            );
 
-            xCitadelLocker.notifyRewardAmount(xCitadel, afterAmount.sub(beforeAmount));
+            xCitadelLocker.notifyRewardAmount(
+                xCitadel,
+                afterAmount.sub(beforeAmount)
+            );
         }
     }
 }
