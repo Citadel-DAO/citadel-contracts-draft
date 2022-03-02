@@ -1,3 +1,13 @@
+# Install
+- Follow the instructions to install [eth-brownie](https://github.com/eth-brownie/brownie).
+- Copy `.env.example` -> `.env` and populate the keys.
+
+# Run
+```
+brownie compile
+brownie run scripts/test_deploy.py
+```
+
 # Citadel (CTDL) Token:
 The base token of the system, an upgradeable ERC20 token that is minted according to the supply schedule.
 
