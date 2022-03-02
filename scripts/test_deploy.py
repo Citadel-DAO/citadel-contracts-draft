@@ -1,9 +1,6 @@
 import pytest
 from brownie import *
 
-from rich.console import Console
-console = Console()
-
 ADDRESS_ZERO = "0x0000000000000000000000000000000000000000"
 
 def ibbtc_whale(dev):
@@ -53,16 +50,16 @@ def main():
     gac.initialize(initialContractGovernance)
     POLICY_OPERATIONS_ROLE = web3.keccak(text="POLICY_OPERATIONS_ROLE")
     gac.grantRole(POLICY_OPERATIONS_ROLE, policy_operator.address, {"from": initialContractGovernance})
-    console.print("[green]GAC was deployed at: [/green]", gac.address)
+    print("[green]GAC was deployed at: [/green]", gac.address)
 
     citadel = CitadelToken.deploy({"from": deployer})
     citadel.initialize("Citadel", "CTDL", gac.address)
-    console.print("[green]CTDL token was deployed at: [/green]", citadel.address)
+    print("[green]CTDL token was deployed at: [/green]", citadel.address)
 
     vesting_contract = Vesting.deploy({"from": deployer})
     vesting_contract.initialize(citadel.address)
 
-    console.print("[green]Vesting contract was deployed at: [/green]", vesting_contract.address)
+    print("[green]Vesting contract was deployed at: [/green]", vesting_contract.address)
 
     xCTDL = xCitadel.deploy({"from": deployer})
     xCTDL.initialize(
@@ -79,14 +76,14 @@ def main():
         [0, 0, 0, 0],  # zero fees
     )
 
-    console.print("[green]xCTDL vault was deployed at: [/green]", xCTDL.address)
+    print("[green]xCTDL vault was deployed at: [/green]", xCTDL.address)
 
     strat = MyStrategy.deploy({"from": deployer})
     strat.initialize(xCTDL.address, citadel.address)
 
     xCTDL.setStrategy(strat.address)
 
-    console.print("[green]Strategy set to: [/green]", strat.address)
+    print("[green]Strategy set to: [/green]", strat.address)
 
     vesting_contract.setVault(xCTDL.address, {"from": deployer})
     vesting_contract.transferOwnership(governance, {"from": deployer})
@@ -94,7 +91,7 @@ def main():
     locker = xCitadelLocker.deploy({"from": deployer})
     locker.initialize(xCTDL.address, "veCitadel", "veCTDL")
 
-    console.print("[green]locker was deployed at: [/green]", locker.address)
+    print("[green]locker was deployed at: [/green]", locker.address)
 
     # add rewards to locker
     locker.addReward("0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B", dev, {"from": deployer}) # cvx
@@ -118,7 +115,9 @@ def main():
     gac.grantRole(CITADEL_MINTER_ROLE, deployer.address, {"from": deployer})
 
     token_sale = TokenSaleUpgradeable.deploy({"from": deployer})
-    token_in = token2(deployer)
+
+    # CVX
+    token_in = Contract.from_explorer("0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B")
     token_sale.initialize(
         citadel,  # tokenOut
         token_in,
@@ -127,6 +126,8 @@ def main():
         32, # price 32 usd / ctdl
         treasury,  # Sale recipient
         ADDRESS_ZERO,
-        MAX_UINT256,  # Sale cap in tokenIn
+        Wei("1000000 ether"),  # Sale cap in tokenIn
         {"from": deployer},
     )
+
+    input("Press [Enter] to close.") 
