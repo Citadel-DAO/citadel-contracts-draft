@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 pragma solidity 0.6.12;
+pragma experimental ABIEncoderV2;
 
 import "@openzeppelin-contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin-contracts-upgradeable/math/SafeMathUpgradeable.sol";
@@ -9,6 +10,7 @@ import "@openzeppelin-contracts-upgradeable/token/ERC20/SafeERC20Upgradeable.sol
 import "@openzeppelin-contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin-contracts-upgradeable/utils/PausableUpgradeable.sol";
 import "@openzeppelin-contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+import "@openzeppelin-contracts-upgradeable/utils/EnumerableSetUpgradeable.sol";
 
 import "./lib/GlobalAccessControlManaged.sol";
 
@@ -30,6 +32,7 @@ Epoch {
 contract CitadelMinter is GlobalAccessControlManaged {
     using SafeMathUpgradeable for uint256;
     using SafeERC20Upgradeable for IERC20Upgradeable;
+    using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
 
     bytes32 public constant CONTRACT_GOVERNANCE_ROLE =
         keccak256("CONTRACT_GOVERNANCE_ROLE");
@@ -43,6 +46,12 @@ contract CitadelMinter is GlobalAccessControlManaged {
     IxCitadelLocker public xCitadelLocker;
 
     uint256 constant MAX_BPS = 10000;
+
+    EnumerableSetUpgradeable.AddressSet internal fundingPools;
+    mapping (address => uint) fundingPoolWeights;
+    uint totalFundingPoolWeight;
+
+    event FundingPoolWeightSet(uint weight, bool increased, uint diff, uint totalFundingPoolWeight);
 
     function initialize(
         address _gac,
@@ -70,6 +79,24 @@ contract CitadelMinter is GlobalAccessControlManaged {
         IERC20Upgradeable(xCitadel).approve(_xCitadelLocker, 2**256 - 1);
     }
 
+    // @dev Set the funding weight for a given address. 
+    // @dev Verification on the address is performed via a proper return value on a citadelContractType() call. 
+    // @dev setting funding pool weight to 0 for an existing pool will delete it from the list
+    function setFundingPoolWeight(address _pool, uint _weight) external onlyRole(POLICY_OPERATIONS_ROLE) gacPausable {
+        bool poolExists = fundingPools.contains(_pool);
+        // Remove existing pool on 0 weight
+        if (_weight == 0 && poolExists) {
+            _setFundingPoolWeight(_pool, 0);
+            _removeFundingPool(_pool);
+        } else {
+            require(_weight <= 10000, "exceed max funding pool weight");
+            if (!poolExists) {
+                _addFundingPool(_pool);
+            }
+            _setFundingPoolWeight(_pool, _weight);
+        }
+    }
+
     function mintAndDistribute(
         uint256 _fundingAmount,
         uint256 _stakingAmount,
@@ -86,24 +113,29 @@ contract CitadelMinter is GlobalAccessControlManaged {
         if (_stakingAmount != 0) {
             // Auto-compound staker amount into xCTDL
             IERC20Upgradeable(citadelToken).transfer(xCitadel, _stakingAmount);
-        }
+        }   
+
+        // Old Method: Deposit in xCTDL and send to policy manager multisig
+        // if (_fundingAmount != 0) {
+        //     uint256 _before = IERC20Upgradeable(xCitadel).balanceOf(
+        //         address(this)
+        //     );
+        //     IxCitadel(xCitadel).deposit(_fundingAmount);
+        //     uint256 _after = IERC20Upgradeable(xCitadel).balanceOf(
+        //         address(this)
+        //     );
+
+        //     // Send funder amount to policy operations for distribution
+        //     IERC20Upgradeable(xCitadel).safeTransfer(
+        //         policyDestination,
+        //         _after.sub(_before)
+        //     );
+        // }
 
         if (_fundingAmount != 0) {
-            uint256 _before = IERC20Upgradeable(xCitadel).balanceOf(
-                address(this)
-            );
-            IxCitadel(xCitadel).deposit(_fundingAmount);
-            uint256 _after = IERC20Upgradeable(xCitadel).balanceOf(
-                address(this)
-            );
-
-            // Send funder amount to policy operations for distribution
-            IERC20Upgradeable(xCitadel).safeTransfer(
-                policyDestination,
-                _after.sub(_before)
-            );
+            _transferToFundingPools(_fundingAmount);
         }
-
+            
         if (_lockingAmount != 0) {
             uint256 beforeAmount = IERC20Upgradeable(xCitadel).balanceOf(
                 address(this)
@@ -119,4 +151,56 @@ contract CitadelMinter is GlobalAccessControlManaged {
             );
         }
     }
+
+    // ===== Internal Functions =====
+
+    // === Funding Pool Management ===
+    function _transferToFundingPools(uint _citadelAmount) internal {
+        require(fundingPools.length() > 0, "no funding pools");
+        for (uint i = 0; i < fundingPools.length(); i++) {
+            address pool = fundingPools.at(i);
+            uint weight = fundingPoolWeights[pool];
+
+            uint amonut = _citadelAmount * weight / totalFundingPoolWeight;
+
+            IERC20Upgradeable(citadelToken).safeTransfer(
+                pool,
+                amonut
+            );
+        }
+    }
+
+    function _setFundingPoolWeight(address _pool, uint _weight) internal {
+        uint existingWeight = fundingPoolWeights[_pool];
+
+        // Decreasing Weight
+        if (existingWeight > _weight) {
+            uint diff = existingWeight - _weight;
+
+            fundingPoolWeights[_pool] = _weight;
+            totalFundingPoolWeight -= diff;
+            emit FundingPoolWeightSet(_weight, false, diff, totalFundingPoolWeight);
+        }
+
+        // Increasing Weight
+        else if (existingWeight < _weight) {
+            uint diff = _weight - existingWeight;
+            
+            fundingPoolWeights[_pool] = _weight;
+            totalFundingPoolWeight += diff;
+            emit FundingPoolWeightSet(_weight, true, diff, totalFundingPoolWeight);
+        }
+
+        // If weight values are the same, no action is needed
+    }
+
+    function _removeFundingPool(address _pool) internal {
+        require(fundingPools.remove(_pool), "funding pool does not exist for removal");
+    }
+
+    function _addFundingPool(address _pool) internal {
+        require(fundingPools.add(_pool), "funding pool already exists");
+    }
+
+
 }
