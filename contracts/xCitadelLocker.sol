@@ -228,6 +228,17 @@ contract xCitadelLocker is
 
     /* ========== VIEWS ========== */
 
+    function getRewardTokens() external view returns (address[] memory) {
+        uint256 numTokens = rewardTokens.length;
+        address[] memory tokens = new address[](numTokens);
+
+        for (uint256 i = 0; i < numTokens; i++) {
+            tokens[i] = rewardTokens[i];
+        }
+
+        return tokens;
+    }
+
     function _rewardPerToken(address _rewardsToken)
         internal
         view
