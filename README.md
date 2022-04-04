@@ -1,3 +1,13 @@
+# Install
+- Follow the instructions to install [eth-brownie](https://github.com/eth-brownie/brownie).
+- Copy `.env.example` -> `.env` and populate the keys.
+
+# Run
+```
+brownie compile
+brownie run scripts/test_deploy.py
+```
+
 # Citadel (CTDL) Token:
 The base token of the system, an upgradeable ERC20 token that is minted according to the supply schedule.
 
@@ -53,4 +63,58 @@ How rewards are distributed:
 - CTDL for stakers is injected into xCTDL to increase ppfs
 - CTDL for funding pool is deposited into xCTDL, and sent to funding pool management for use in funding 
 - CTDL for lockers is deposited into xCTDL and transferred to locking contract. The rewards rate for Lockers is modified.
+
+# Funding distribution
+When CTDL is minted, a certain portion goes to the funding pool. This is distributed amongst the different asset accumulator contracts. Each contract is given a weight which determines it's proprtion of the funding pool to recieve. These weights are set by the policy team.
+
+```
+struct FundingWeight {
+    mapping (address => uint) fundingWeight
+    uint totalFundingWeight
+}
+```
+
+> Example:
+* BTC Funding Contract: 80
+* CVX Funding Contract: 20
+
+### setFundingContractWeight(address, weight) onlyPolicy
+Set the funding weight for a given address. Verification on the address is simple, the address must return "funding" on the citadelContractType() call.
+Funding weights must be between 1 and 10000.
+
+### removeFundingContract(address) onlyPolicy
+Remove an existing funding weight. 
+The address must be in the list.
+Note that a funding contract weight cannot be set to zero, so this is the only way to remove it.
+
+# Funding Contract
+Has a:
+* Oracle for market price of CTDL
+* Oracle for market price of the accumulated asset
+* xCTDL live ppfs
+
+From there we have the price of CTDL relative to the accumulated asset
+1 asset token = x CTDL
+
+From there we apply a *discount*.
+
+We then deposit the CTDL into xCTDL for the user and give it to them. 
+> Should we do this with all the CTDL when it comes in, diluting xCTDL holders for cheaper gas costs?
+
+```
+discount 1e18
+rate 1e18
+```
+
+The discount is initially set by admin fiat.
+Every time more funds enter the contract, the discount rate is modulated according to the *discount rate function*
+
+The initial discount rate function works as follows:
+* If the CTDL is sold out, decrease the discount according to *Rate*
+* If the CTDL is not sold out, increase the discount according to *Rate*
+
+Rate is set by the admin and is defined as bps / day.
+Everytime the contract is funded by freshly minted citadel, we evaluate how long it has been since the last update. We then apply the rate to it.
+
+> change = timeSinceLastUpdate * Rate
 
